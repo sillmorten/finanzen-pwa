@@ -10,6 +10,7 @@ import { timeAgo } from '../lib/prices'
 import { Card, SectionTitle, Button, Empty } from '../components/ui'
 import PositionList from '../components/PositionList'
 import PositionSheet from '../components/PositionSheet'
+import Ideas from '../components/Ideas'
 
 export default function Depot({ toast, prices, onNewAccount, onOpenAccount }) {
   const { state } = useStore()
@@ -45,6 +46,8 @@ export default function Depot({ toast, prices, onNewAccount, onOpenAccount }) {
           </button>
         </div>
       </Card>
+
+      <Ideas />
 
       {accounts.length === 0 && (
         <Card className="mt-4">
