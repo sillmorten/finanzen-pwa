@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Pencil, Eye, EyeOff } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountPerformance, accountBalance, visibleNetWorth, limitUsage } from '../lib/finance'
+import { accountPerformance, accountBalance, limitUsage } from '../lib/finance'
 import { useLock } from '../lib/lock'
 import { Lock, Unlock } from 'lucide-react'
 import { fmtEUR, fmtEUR0, monthKey } from '../lib/format'
@@ -13,7 +13,7 @@ import { ArrowUpDown } from 'lucide-react'
 import { Card, SectionTitle, Button } from '../components/ui'
 import BankCard, { AddCard } from '../components/BankCard'
 import AccountSheet from '../components/AccountSheet'
-import SaveLevel from '../components/SaveLevel'
+import { isInvest, cardTheme } from '../lib/categories'
 
 export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab, toast, detail, setDetail, newAccount, setNewAccount }) {
   const { state } = useStore()
@@ -66,6 +66,16 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
   }, [state.transactions, selected])
   const usage = selected ? limitUsage(state, selected, key) : null
 
+  const open = state.accounts.filter((a) => !a.locked)
+  const investAccs = open.filter(isInvest)
+  const available = open.filter((a) => !isInvest(a)).reduce((sum, a) => sum + accountBalance(state, a), 0)
+  const invested = investAccs.reduce((sum, a) => sum + accountBalance(state, a), 0)
+  const investToday = (() => {
+    const perfs = investAccs.map((a) => accountPerformance(state, a.id)).filter(Boolean)
+    if (!perfs.length) return null
+    const label = perfs.every((p) => p.label === perfs[0].label) ? perfs[0].label : ''
+    return { value: perfs.reduce((s2, p) => s2 + p.value, 0), label }
+  })()
   const { toggleLock } = useLock()
   const [reorder, setReorder] = useState(false)
   const locked = !!selected?.locked
@@ -77,13 +87,26 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       {/* Gesamtvermögen */}
       <div className="flex items-end justify-between px-1">
         <div>
-          <div className="text-sm text-muted">Gesamtvermögen</div>
-          <div className="text-[34px] leading-tight font-bold tabular">{money(visibleNetWorth(state))}</div>
+          <div className="text-sm text-muted">Verfügbar</div>
+          <div className="text-[34px] leading-tight font-bold tabular">{money(available)}</div>
         </div>
         <button onClick={toggleHidden} className="size-11 grid place-items-center rounded-full bg-surface text-muted mb-1" aria-label={hidden ? 'Beträge zeigen' : 'Beträge verbergen'}>
           {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
         </button>
       </div>
+      {investAccs.length > 0 && (
+        <button onClick={() => onTab('depot')} className="mt-3 w-full flex items-center justify-between rounded-2xl bg-surface border border-line/60 px-4 min-h-14 active:bg-surface-2">
+          <span className="flex items-center gap-2.5">
+            <span className="flex -space-x-1.5">{investAccs.map((a) => <span key={a.id} className="h-4 w-6 rounded ring-2 ring-surface" style={{ background: cardTheme(a.theme).bg }} />)}</span>
+            <span className="text-sm text-muted">Investiert</span>
+          </span>
+          <span className="text-right">
+            <span className="block font-semibold tabular">{money(invested)}</span>
+            {investToday && !hidden && <span className={`block text-xs tabular ${investToday.value >= 0 ? 'text-save' : 'text-spend'}`}>{investToday.value >= 0 ? '▲ +' : '▼ '}{fmtEUR(investToday.value)} {investToday.label}</span>}
+          </span>
+        </button>
+      )}
+
       {/* Karten-Karussell */}
       <div
         ref={scroller}
