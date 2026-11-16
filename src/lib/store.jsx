@@ -51,7 +51,7 @@ export function normalize(data) {
     })),
     transactions: arr(data.transactions)
       .filter((t) => t && (t.type === 'income' || t.type === 'expense'))
-      .map((t) => ({ id: t.id || uid(), accountId: t.accountId || null, type: t.type, amount: Math.abs(n(t.amount)), note: t.note || '', date: t.date || todayISO() })),
+      .map((t) => ({ id: t.id || uid(), accountId: t.accountId || null, type: t.type, amount: Math.abs(n(t.amount)), note: t.note || '', date: t.date || todayISO(), ...(t.transferId ? { transferId: t.transferId } : {}) })),
     pots: arr(data.pots).map((p) => ({
       id: p.id || uid(),
       name: p.name || 'Spartopf',
@@ -118,8 +118,22 @@ function reducer(state, action) {
       return { ...state, transactions: [{ id: uid(), ...action.tx }, ...state.transactions] }
     case 'tx/update':
       return { ...state, transactions: state.transactions.map((t) => (t.id === action.tx.id ? { ...t, ...action.tx } : t)) }
-    case 'tx/delete':
-      return { ...state, transactions: state.transactions.filter((t) => t.id !== action.id) }
+    case 'tx/delete': {
+      const tx = state.transactions.find((t) => t.id === action.id)
+      return { ...state, transactions: state.transactions.filter((t) => t.id !== action.id && !(tx?.transferId && t.transferId === tx.transferId)) }
+    }
+    // Umbuchung = zwei verknüpfte Buchungen (Ausgang vom einen, Eingang aufs andere Konto)
+    case 'transfer/add':
+    case 'transfer/update': {
+      const { from, to, amount, note = '', date } = action.transfer
+      const transferId = action.transfer.transferId || uid()
+      const rest = state.transactions.filter((t) => t.transferId !== transferId)
+      const pair = [
+        { id: uid(), accountId: from, type: 'expense', amount, note, date, transferId },
+        { id: uid(), accountId: to, type: 'income', amount, note, date, transferId },
+      ]
+      return { ...state, transactions: [...pair, ...rest] }
+    }
 
     case 'acc/add':
       return { ...state, accounts: [...state.accounts, { id: action.id || uid(), ...action.account }] }

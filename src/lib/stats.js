@@ -41,12 +41,13 @@ export function stats(state, period) {
 
   const rows = list.map((b) => {
     const tx = txs.filter((t) => t.date.slice(0, len) === b.key)
-    const income = tx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
-    const expense = tx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
+    const real = tx.filter((t) => !t.transferId)
+    const income = real.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0)
+    const expense = real.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0)
     // Kontostand am Ende des Zeitraums = heute minus alles, was danach gebucht wurde
     const later = txs.filter((t) => t.date.slice(0, len) > b.key && t.date <= today)
     const balance = cashNow - later.reduce((s, t) => s + (t.type === 'income' ? t.amount : -t.amount), 0)
-    return { ...b, income, expense, net: income - expense, balance, tx }
+    return { ...b, income, expense, net: income - expense, balance, tx: real.concat(tx.filter((t) => t.transferId && t.type === 'expense')) }
   })
   return { rows, hasTx: txs.length > 0 }
 }

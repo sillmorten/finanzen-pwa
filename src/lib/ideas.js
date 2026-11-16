@@ -18,7 +18,7 @@ export function analyze(state, bufferMonths = 3) {
   const now = monthKey(new Date())
   const months = [1, 2, 3].map((i) => shiftMonth(now, -i))
   const flows = months.map((m) => {
-    const tx = state.transactions.filter((t) => t.date.startsWith(m))
+    const tx = state.transactions.filter((t) => !t.transferId && t.date.startsWith(m))
     return {
       inc: tx.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0),
       exp: tx.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0),
