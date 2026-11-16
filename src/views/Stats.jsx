@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { TrendingUp, TrendingDown } from 'lucide-react'
 import { useStore } from '../lib/store'
 import { stats } from '../lib/stats'
@@ -6,6 +6,9 @@ import { lockedCount } from '../lib/finance'
 import { fmtEUR, fmtEUR0 } from '../lib/format'
 import { Card, Segmented, SectionTitle, Empty } from '../components/ui'
 import TxList, { sortTx } from '../components/TxList'
+import { isInvest, cardTheme } from '../lib/categories'
+import { useHistory, valueSeries, valueBuckets } from '../lib/history'
+import { accountPositions, positionValue } from '../lib/finance'
 
 // validiert (dark, #131a22): Lightness/Chroma/Kontrast PASS, CVD 7,5 → Zusatzkodierung über Richtung (oben/unten) + Legende
 const IN = '#0ea573'
@@ -34,13 +37,39 @@ function niceMax(v) {
 export default function Stats({ onEditTx }) {
   const { state } = useStore()
   const [period, setPeriod] = useState(() => { try { return localStorage.getItem('finanzen-pwa:stats') || 'month' } catch { return 'month' } })
+  const [view, setView] = useState('cash')
+  const invest = state.accounts.filter((a) => isInvest(a) && !a.locked && state.assets.some((p) => p.accountId === a.id))
+  const pick = (p) => { setPeriod(p); try { localStorage.setItem('finanzen-pwa:stats', p) } catch {} }
+  const acc = invest.find((a) => a.id === view)
+
+  return (
+    <div>
+      {invest.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 mb-3">
+          {[{ id: 'cash', name: 'Ein- & Ausgänge' }, ...invest].map((a) => (
+            <button key={a.id} onClick={() => setView(a.id)} className={`shrink-0 flex items-center gap-2 rounded-full pl-2.5 pr-4 min-h-10 text-sm border ${view === a.id || (!acc && a.id === 'cash') ? 'border-white bg-surface-2 text-white' : 'border-line text-muted'}`}>
+              {a.id === 'cash' ? <span className="text-base">💶</span> : <span className="h-4 w-6 rounded" style={{ background: cardTheme(a.theme).bg }} />}
+              {a.name}
+            </button>
+          ))}
+        </div>
+      )}
+      <Segmented options={PERIODS} value={period} onChange={pick} />
+      {acc ? <InvestStats key={acc.id} account={acc} period={period} /> : <CashStats period={period} onEditTx={onEditTx} />}
+    </div>
+  )
+}
+
+function CashStats({ period, onEditTx }) {
+  const { state } = useStore()
   const { rows, hasTx } = useMemo(() => stats(state, period), [state, period])
   const [sel, setSel] = useState(null)
   const idx = sel != null && sel < rows.length ? sel : rows.length - 1
   const cur = rows[idx]
   const prev = rows[idx - 1]
   const locked = lockedCount(state)
-  const pick = (p) => { setPeriod(p); setSel(null); try { localStorage.setItem('finanzen-pwa:stats', p) } catch {} }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setSel(null), [period])
 
   const totIn = rows.reduce((s, r) => s + r.income, 0)
   const totOut = rows.reduce((s, r) => s + r.expense, 0)
@@ -48,8 +77,6 @@ export default function Stats({ onEditTx }) {
 
   return (
     <div>
-      <Segmented options={PERIODS} value={period} onChange={pick} />
-
       {!hasTx ? (
         <Card className="mt-4">
           <Empty icon="📊" title="Noch keine Buchungen" text="Sobald du Ein- und Ausgaben auf deinen Karten einträgst, siehst du hier, wie jeder Tag, Monat und jedes Jahr läuft." />
@@ -144,7 +171,7 @@ const W = 340
 const PAD_L = 40
 
 /** Divergierende Balken: Eingang nach oben, Ausgang nach unten */
-function Bars({ rows, idx, onPick }) {
+function Bars({ rows, idx, onPick, info }) {
   const H = 190, top = 14, bottom = 170
   // gemeinsame Skala, Nulllinie dort, wo Ein- und Ausgänge den Platz brauchen
   const mxIn = Math.max(...rows.map((r) => r.income)), mxOut = Math.max(...rows.map((r) => r.expense))
@@ -163,10 +190,12 @@ function Bars({ rows, idx, onPick }) {
     <div>
       <div className="flex items-center justify-between gap-2 mt-3 mx-1 rounded-xl bg-surface-2 px-3 py-2 text-xs tabular">
         <span className="text-muted truncate">{sel.long}</span>
-        <span className="flex gap-3 shrink-0">
-          <span className="flex items-center gap-1"><i className="size-2 rounded-sm" style={{ background: IN }} />+{fmtEUR0(sel.income)}</span>
-          <span className="flex items-center gap-1"><i className="size-2 rounded-sm" style={{ background: OUT }} />−{fmtEUR0(sel.expense)}</span>
-        </span>
+        {info ? info(sel) : (
+          <span className="flex gap-3 shrink-0">
+            <span className="flex items-center gap-1"><i className="size-2 rounded-sm" style={{ background: IN }} />+{fmtEUR0(sel.income)}</span>
+            <span className="flex items-center gap-1"><i className="size-2 rounded-sm" style={{ background: OUT }} />−{fmtEUR0(sel.expense)}</span>
+          </span>
+        )}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto mt-2 select-none" role="img" aria-label="Ein- und Ausgänge je Zeitraum">
         {/* Raster */}
@@ -247,4 +276,97 @@ function roundTop(x, y, w, h, r) {
 function roundBottom(x, y, w, h, r) {
   r = Math.min(r, h)
   return `M${x},${y}H${x + w}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x + r}Q${x},${y + h} ${x},${y + h - r}Z`
+}
+
+const fmtPct = (v) => `${v >= 0 ? '+' : ''}${v.toLocaleString('de-DE', { maximumFractionDigits: 2, minimumFractionDigits: 2 })} %`
+
+/** Depot / Wallet: Gewinn oder Verlust je Tag, Monat, Jahr */
+function InvestStats({ account, period }) {
+  const { state } = useStore()
+  const positions = accountPositions(state, account.id)
+  const hist = useHistory(positions)
+  const series = useMemo(() => (hist ? valueSeries(positions, hist) : []), [hist, positions])
+  const rows = useMemo(() => valueBuckets(series, period).map((r) => ({ ...r, income: Math.max(0, r.change), expense: Math.max(0, -r.change), balance: r.value })), [series, period])
+  const [sel, setSel] = useState(null)
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setSel(null), [period])
+
+  if (!hist) return <Card className="mt-4 text-center text-muted text-sm py-10">Lade Kursverlauf …</Card>
+  if (!rows.length) return <Card className="mt-4"><Empty icon="📉" title="Noch kein Kursverlauf" text="Für diese Positionen gibt es noch keine Tageskurse. Sie kommen mit dem nächsten Kurs-Update." /></Card>
+
+  const idx = sel != null && sel < rows.length ? sel : rows.length - 1
+  const cur = rows[idx]
+  const prev = rows[idx - 1]
+  const up = cur.change >= 0
+  const days = series.length
+
+  return (
+    <div>
+      <Card className="mt-4">
+        <div className="text-sm text-muted">{account.name} · {idx === rows.length - 1 ? NOW_LABEL[period] : cur.long}</div>
+        <div className={`text-4xl font-bold mt-1 tabular ${up ? 'text-save' : 'text-spend'}`}>{cur.change > 0 ? '+' : ''}{fmtEUR(cur.change)}</div>
+        <div className={`text-sm mt-1 tabular ${up ? 'text-save' : 'text-spend'}`}>
+          {up ? '▲' : '▼'} {fmtPct(cur.pct)}
+          {prev && <span className="text-muted"> · {PREV_LABEL[period]}: {prev.change > 0 ? '+' : ''}{fmtEUR0(prev.change)}</span>}
+        </div>
+        <div className="grid grid-cols-2 gap-2 mt-4">
+          <div className="rounded-2xl bg-surface-2 p-3">
+            <div className="text-xs text-muted">Wert {idx === rows.length - 1 ? 'jetzt' : 'am Ende'}</div>
+            <div className="text-lg font-semibold tabular mt-0.5">{fmtEUR(cur.value)}</div>
+          </div>
+          <div className="rounded-2xl bg-surface-2 p-3">
+            <div className="text-xs text-muted">{period === 'day' ? 'Gewinntage' : period === 'month' ? 'Gewinnmonate' : 'Gewinnjahre'}</div>
+            <div className="text-lg font-semibold tabular mt-0.5">{rows.filter((r) => r.change > 0).length} von {rows.length}</div>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="mt-4 !px-3">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="font-semibold">Gewinn & Verlust</h2>
+          <div className="flex gap-3 text-xs text-muted">
+            <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm" style={{ background: IN }} />Plus</span>
+            <span className="flex items-center gap-1.5"><i className="size-2.5 rounded-sm" style={{ background: OUT }} />Minus</span>
+          </div>
+        </div>
+        <Bars rows={rows} idx={idx} onPick={setSel} info={(r) => (
+          <span className={`shrink-0 ${r.change >= 0 ? 'text-save' : 'text-spend'}`}>{r.change > 0 ? '+' : ''}{fmtEUR(r.change)} ({fmtPct(r.pct)})</span>
+        )} />
+        <p className="text-xs text-muted px-1 mt-1">Tippe auf einen Balken für Details.{period === 'day' ? ' Am Wochenende ruht die Börse, nur Krypto bewegt sich.' : ''}</p>
+      </Card>
+
+      <Card className="mt-4 !px-3">
+        <div className="flex items-baseline justify-between px-1">
+          <h2 className="font-semibold">Wertverlauf</h2>
+          <span className="text-sm tabular">{fmtEUR0(cur.value)}</span>
+        </div>
+        <Line rows={rows} idx={idx} onPick={setSel} />
+      </Card>
+
+      <SectionTitle>Positionen heute</SectionTitle>
+      <div className="rounded-3xl bg-surface border border-line/60 divide-y divide-line/60">
+        {positions.map((p) => {
+          const v = positionValue(p)
+          const d = p.change != null ? v - v / (1 + p.change / 100) : null
+          return (
+            <div key={p.id} className="flex items-center justify-between px-4 py-3">
+              <div className="min-w-0">
+                <div className="font-medium truncate">{p.name}</div>
+                <div className="text-xs text-muted tabular">{fmtEUR(v)}</div>
+              </div>
+              {d != null && (
+                <div className={`text-right tabular text-sm ${d >= 0 ? 'text-save' : 'text-spend'}`}>
+                  <div className="font-semibold">{d > 0 ? '+' : ''}{fmtEUR(d)}</div>
+                  <div className="text-xs">{fmtPct(p.change)}</div>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      <p className="text-[11px] text-muted mt-3 px-1 leading-snug">
+        Gerechnet mit deinen heutigen Stückzahlen und Tagesschlusskursen ({days > 300 ? '12 Monate' : `${days} Tage`} Verlauf). Hast du zwischendurch gekauft oder verkauft, weicht der Verlauf von Trade Republic ab.
+      </p>
+    </div>
+  )
 }
