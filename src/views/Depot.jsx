@@ -7,12 +7,24 @@ import { Lock } from 'lucide-react'
 import { isInvest, cardTheme, accountTypeLabel } from '../lib/categories'
 import { fmtEUR, fmtEUR0 } from '../lib/format'
 import { timeAgo } from '../lib/prices'
-import { Card, SectionTitle, Button, Empty } from '../components/ui'
+import { Card, SectionTitle, Button, Empty, Segmented } from '../components/ui'
+import Market from './Market'
 import PositionList from '../components/PositionList'
 import PositionSheet from '../components/PositionSheet'
 import Ideas from '../components/Ideas'
 
-export default function Depot({ toast, prices, onNewAccount, onOpenAccount }) {
+export default function Depot(props) {
+  const [view, setView] = useState(() => { try { return localStorage.getItem('finanzen-pwa:depotview') || 'mine' } catch { return 'mine' } })
+  const pick = (v) => { setView(v); try { localStorage.setItem('finanzen-pwa:depotview', v) } catch {} }
+  return (
+    <div>
+      <Segmented value={view} onChange={pick} options={[{ value: 'mine', label: 'Mein Depot' }, { value: 'market', label: 'Markt & Beobachtung' }]} />
+      <div className="mt-4">{view === 'market' ? <Market /> : <MyDepot {...props} />}</div>
+    </div>
+  )
+}
+
+function MyDepot({ toast, prices, onNewAccount, onOpenAccount }) {
   const { state } = useStore()
   const [edit, setEdit] = useState(null) // { position?, accountId? }
   const accounts = state.accounts.filter(isInvest)

@@ -19,6 +19,8 @@ export const emptyState = () => ({
   assets: [],
   /** Wunschliste: { id, name, emoji, price, need: 'need'|'want', createdAt, potId } */
   wishes: [],
+  /** Beobachtungsliste (Markt): { symbol: 'NASDAQ:TTWO', name } */
+  watchlist: [],
 })
 
 function load() {
@@ -61,6 +63,7 @@ export function normalize(data) {
       deadline: p.deadline || '',
       history: arr(p.history).map((h) => ({ id: h.id || uid(), amount: n(h.amount), date: h.date || todayISO(), note: h.note || '' })),
     })),
+    watchlist: arr(data.watchlist).filter((w) => w && w.symbol).map((w) => ({ symbol: String(w.symbol), name: w.name || String(w.symbol) })),
     wishes: arr(data.wishes).map((w) => ({
       id: w.id || uid(),
       name: w.name || 'Wunsch',
@@ -151,6 +154,18 @@ function reducer(state, action) {
       return { ...state, pots: [...state.pots, { id: uid(), history: [], ...action.pot }] }
     case 'pot/update':
       return { ...state, pots: state.pots.map((p) => (p.id === action.pot.id ? { ...p, ...action.pot } : p)) }
+    case 'watch/add':
+      if (state.watchlist.some((w) => w.symbol === action.item.symbol)) return state
+      return { ...state, watchlist: [...state.watchlist, action.item] }
+    case 'watch/remove':
+      return { ...state, watchlist: state.watchlist.filter((w) => w.symbol !== action.symbol) }
+    case 'watch/move': {
+      const list = [...state.watchlist]
+      const i = list.findIndex((w) => w.symbol === action.symbol), j = i + action.dir
+      if (i < 0 || j < 0 || j >= list.length) return state
+      ;[list[i], list[j]] = [list[j], list[i]]
+      return { ...state, watchlist: list }
+    }
     case 'wish/add':
       return { ...state, wishes: [...state.wishes, { id: uid(), createdAt: todayISO(), potId: null, ...action.wish }] }
     case 'wish/update':
