@@ -8,6 +8,8 @@ import { fmtEUR, fmtEUR0, monthKey, monthLabel } from '../lib/format'
 import TxList, { sortTx } from '../components/TxList'
 import LimitBar from '../components/LimitBar'
 import CardDetail from './CardDetail'
+import ReorderSheet from '../components/ReorderSheet'
+import { ArrowUpDown } from 'lucide-react'
 import { Card, SectionTitle, Button } from '../components/ui'
 import BankCard, { AddCard } from '../components/BankCard'
 import AccountSheet from '../components/AccountSheet'
@@ -66,6 +68,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
   const usage = selected ? limitUsage(state, selected, key) : null
 
   const { toggleLock } = useLock()
+  const [reorder, setReorder] = useState(false)
   const locked = !!selected?.locked
   const money = (v, f = fmtEUR) => (hidden ? '•••••' : f(v))
   const smoney = (v, f = fmtEUR) => (hidden || locked ? '•••••' : f(v))
@@ -103,12 +106,15 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
         </div>
       </div>
 
-      {/* Punkte-Indikator */}
+      {/* Punkte-Indikator + Reihenfolge */}
       {accounts.length > 1 && (
-        <div className="flex justify-center gap-1.5 mt-1">
+        <div className="relative flex justify-center items-center gap-1.5 mt-1 h-9">
           {accounts.map((a) => (
             <span key={a.id} className={`h-1.5 rounded-full transition-all ${a.id === selected?.id ? 'w-5 bg-white' : 'w-1.5 bg-line'}`} />
           ))}
+          <button onClick={() => setReorder(true)} className="absolute right-0 flex items-center gap-1 text-xs text-muted min-h-9 px-2 rounded-full active:bg-surface" aria-label="Reihenfolge ändern">
+            <ArrowUpDown size={14} /> Reihenfolge
+          </button>
         </div>
       )}
 
@@ -173,6 +179,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       {detail && selected && (
         <CardDetail account={selected} hidden={hidden} onClose={() => setDetail(false)} onBook={onBook} onEditTx={onEditTx} onEditAccount={() => setEdit(selected)} toast={toast} />
       )}
+      {reorder && <ReorderSheet onClose={() => setReorder(false)} onFirst={(id) => id && onSelect(id)} />}
       {edit && <AccountSheet account={edit === 'new' ? null : edit} onClose={closeEdit} onCreated={onSelect} toast={toast} />}
     </div>
   )

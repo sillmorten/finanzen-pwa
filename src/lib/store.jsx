@@ -179,6 +179,12 @@ function reducer(state, action) {
     }
     case 'import':
       return normalize(action.data)
+    case 'acc/reorder': {
+      const byId = Object.fromEntries(state.accounts.map((a) => [a.id, a]))
+      const ordered = action.ids.map((id) => byId[id]).filter(Boolean)
+      const rest = state.accounts.filter((a) => !action.ids.includes(a.id))
+      return { ...state, accounts: [...ordered, ...rest] }
+    }
     case 'acc/lock':
       return { ...state, accounts: state.accounts.map((a) => (a.id === action.id ? { ...a, locked: action.locked } : a)) }
     case 'pin/set':
