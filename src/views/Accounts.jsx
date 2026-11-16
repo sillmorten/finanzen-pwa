@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Pencil, Eye, EyeOff } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountPerformance, accountBalance, visibleAssetsTotal, visibleNetWorth, lockedCount, monthFlow, limitUsage } from '../lib/finance'
+import { accountPerformance, accountBalance, visibleNetWorth, limitUsage } from '../lib/finance'
 import { useLock } from '../lib/lock'
 import { Lock, Unlock } from 'lucide-react'
-import { fmtEUR, fmtEUR0, monthKey, monthLabel } from '../lib/format'
+import { fmtEUR, fmtEUR0, monthKey } from '../lib/format'
 import TxList, { sortTx } from '../components/TxList'
 import LimitBar from '../components/LimitBar'
 import CardDetail from './CardDetail'
@@ -26,7 +26,6 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
   const accounts = state.accounts
   const selected = accounts.find((a) => a.id === selectedId) || accounts[0]
   const key = monthKey()
-  const flow = selected ? monthFlow(state, selected.id, key) : null
 
   const toggleHidden = () => {
     setHidden((h) => { try { localStorage.setItem('finanzen-pwa:hide', h ? '0' : '1') } catch {} return !h })
@@ -85,11 +84,6 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
           {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
         </button>
       </div>
-      <div className="text-xs text-muted px-1 mt-0.5">
-        {state.accounts.length} {state.accounts.length === 1 ? 'Konto' : 'Konten'}{visibleAssetsTotal(state) > 0 && <> · davon investiert {money(visibleAssetsTotal(state), fmtEUR0)}</>}
-        {lockedCount(state) > 0 && <> · 🔒 {lockedCount(state)} gesperrt (nicht eingerechnet)</>}
-      </div>
-
       {/* Karten-Karussell */}
       <div
         ref={scroller}
@@ -139,18 +133,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
             <Action icon={<Lock size={20} />} label="Sperren" cls="text-amber-300" onClick={() => toggleLock(selected)} />
           </div>
 
-          {/* Monat */}
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <Card className="!p-3">
-              <div className="text-xs text-muted">Eingänge {monthLabel(key, true)}</div>
-              <div className="text-lg font-semibold text-save tabular">+{money(flow.income, fmtEUR0)}</div>
-            </Card>
-            <Card className="!p-3">
-              <div className="text-xs text-muted">Ausgänge {monthLabel(key, true)}</div>
-              <div className="text-lg font-semibold text-spend tabular">−{money(flow.expense, fmtEUR0)}</div>
-            </Card>
-          </div>
-          {usage && <div className="mt-2"><LimitBar usage={usage} hidden={hidden} onClick={() => setDetail(true)} /></div>}
+          {usage && <div className="mt-3"><LimitBar usage={usage} hidden={hidden} onClick={() => setDetail(true)} /></div>}
           <p className="text-xs text-muted text-center mt-3">Tipp: Karte antippen für alle Buchungen</p>
           </>
           )}
