@@ -9,6 +9,7 @@ import Savings from './views/Savings'
 import Depot from './views/Depot'
 import { usePriceUpdater } from './lib/prices'
 import Settings from './views/Settings'
+import AddLink from './components/AddLink'
 
 const TITLES = { accounts: 'Meine Konten', savings: 'Sparen', depot: 'Depot & Krypto' }
 const getHashTab = () => {
@@ -73,6 +74,7 @@ export default function App() {
       <BottomNav tab={tab} onTab={goTab} onAdd={() => book('expense')} />
       <TransactionSheet open={!!tx} editTx={tx?.editTx} defaults={tx?.defaults} onClose={() => setTx(null)} onSaved={toast} />
       <Settings open={settingsOpen} onClose={() => setSettingsOpen(false)} toast={toast} />
+      <AddLink toast={toast} onDone={() => { setTab('accounts'); setTimeout(() => prices.refresh({ force: true }), 50) }} />
       <Toast message={toastMsg} onDone={clearToast} />
     </div>
   )

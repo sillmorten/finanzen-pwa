@@ -82,21 +82,21 @@ export default function PositionSheet({ position, accountId, onClose, toast }) {
       )}
 
       <div className="mt-4">
-        <Segmented value={kind} onChange={switchKind} options={[{ value: 'etf', label: 'ETF' }, { value: 'crypto', label: 'Krypto' }, { value: 'other', label: 'Sonstiges' }]} />
+        <Segmented value={kind} onChange={switchKind} options={[{ value: 'etf', label: 'ETF / Aktie' }, { value: 'crypto', label: 'Krypto' }, { value: 'other', label: 'Sonstiges' }]} />
       </div>
 
       {kind === 'etf' && (
-        <Field label="ETF auswählen" hint="Kurse werden automatisch aktualisiert (Xetra, in Euro).">
+        <Field label="ETF oder Aktie auswählen" hint="Kurse werden automatisch aktualisiert (Xetra, in Euro).">
           <div className="relative">
             <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted" />
-            <input className={`${inputCls} pl-11`} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name oder ISIN, z. B. MSCI World" />
+            <input className={`${inputCls} pl-11`} value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Name oder ISIN, z. B. MSCI World, Microsoft" />
           </div>
           <div className="mt-2 max-h-56 overflow-y-auto rounded-2xl border border-line divide-y divide-line/60">
             {etfs.map((e) => (
               <button key={e.isin} type="button" onClick={() => setPick({ name: e.name, symbol: e.symbol, isin: e.isin })} className={`w-full text-left px-4 py-2.5 flex items-center gap-2 ${pick?.isin === e.isin ? 'bg-save/10' : 'active:bg-surface-2'}`}>
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-medium truncate">{e.name}</span>
-                  <span className="block text-xs text-muted">{e.isin}</span>
+                  <span className="block text-xs text-muted">{e.stock ? 'Aktie' : 'ETF'} · {e.isin}</span>
                 </span>
                 {pick?.isin === e.isin && <Check size={18} className="text-save" />}
               </button>

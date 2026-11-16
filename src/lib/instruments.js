@@ -21,6 +21,17 @@ export const ETFS = [
   { isin: 'IE00BYZK4552', name: 'iShares Automation & Robotics', symbol: '2B76.DE' },
   { isin: 'IE00B1XNHC34', name: 'iShares Global Clean Energy', symbol: 'IQQH.DE' },
   { isin: 'DE000A0S9GB0', name: 'Xetra-Gold', symbol: '4GLD.DE' },
+  // Aktien (Xetra, Euro)
+  { isin: 'US5949181045', name: 'Microsoft', symbol: 'MSF.DE', stock: true },
+  { isin: 'US0378331005', name: 'Apple', symbol: 'APC.DE', stock: true },
+  { isin: 'US67066G1040', name: 'NVIDIA', symbol: 'NVD.DE', stock: true },
+  { isin: 'US0231351067', name: 'Amazon', symbol: 'AMZ.DE', stock: true },
+  { isin: 'US02079K3059', name: 'Alphabet (Google) A', symbol: 'ABEA.DE', stock: true },
+  { isin: 'US30303M1027', name: 'Meta Platforms', symbol: 'FB2A.DE', stock: true },
+  { isin: 'US88160R1014', name: 'Tesla', symbol: 'TL0.DE', stock: true },
+  { isin: 'NL0010273215', name: 'ASML', symbol: 'ASME.DE', stock: true },
+  { isin: 'DE0007164600', name: 'SAP', symbol: 'SAP.DE', stock: true },
+  { isin: 'DE0007030033', name: 'Rheinmetall', symbol: 'RHM.DE', stock: true },
 ]
 
 /** Kryptowährungen (Kurse live über CoinGecko, ohne API-Key) */

@@ -154,6 +154,27 @@ function reducer(state, action) {
         }),
       }
 
+    case 'merge': {
+      // Fügt Konten & Positionen hinzu, ohne bestehende Daten zu löschen.
+      // Gleichnamige Konten werden wiederverwendet, gleiche Papiere im Konto aktualisiert.
+      const accounts = [...state.accounts]
+      let assets = [...state.assets]
+      for (const acc of action.data.accounts || []) {
+        let target = accounts.find((a) => a.name.trim().toLowerCase() === String(acc.name || '').trim().toLowerCase())
+        if (!target) {
+          target = { id: uid(), name: acc.name || 'Konto', type: acc.type || 'depot', theme: acc.theme || 'midnight', last4: '', initialBalance: Number(acc.cash) || 0, limit: 0 }
+          accounts.push(target)
+        }
+        for (const p of acc.positions || []) {
+          const key = (x) => x.isin || x.cgId || x.name
+          const existing = assets.find((x) => x.accountId === target.id && key(x) === key(p))
+          const data = { kind: p.kind || 'etf', name: p.name, symbol: p.symbol || '', isin: p.isin || '', cgId: p.cgId || '', amount: Number(p.amount) || 0, buyValue: Number(p.buyValue) || 0 }
+          if (existing) assets = assets.map((x) => (x === existing ? { ...x, ...data } : x))
+          else assets.push({ id: uid(), accountId: target.id, price: Number(p.price) || 0, change: null, updatedAt: null, ...data })
+        }
+      }
+      return { ...state, accounts, assets }
+    }
     case 'import':
       return normalize(action.data)
     case 'reset':
