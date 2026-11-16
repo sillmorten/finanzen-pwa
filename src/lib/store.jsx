@@ -1,5 +1,8 @@
 import { createContext, useContext, useEffect, useReducer } from 'react'
 import { uid, todayISO } from './format'
+import { CRYPTOS } from './instruments'
+
+const CRYPTO_BY_SYMBOL = Object.fromEntries(CRYPTOS.map((c) => [c.symbol, c]))
 
 const STORAGE_KEY = 'finanzen-pwa:v1'
 export const SCHEMA_VERSION = 2
@@ -55,15 +58,33 @@ export function normalize(data) {
       deadline: p.deadline || '',
       history: arr(p.history).map((h) => ({ id: h.id || uid(), amount: n(h.amount), date: h.date || todayISO(), note: h.note || '' })),
     })),
+    /** Positionen: { id, accountId, kind: 'etf'|'crypto'|'other', name, symbol, isin, cgId, amount, price, buyValue, change, updatedAt } */
     assets: arr(data.assets).map((a) => ({
       id: a.id || uid(),
-      name: a.name || a.symbol || 'Asset',
+      accountId: a.accountId || null,
+      kind: ['etf', 'crypto', 'other'].includes(a.kind) ? a.kind : 'other',
+      name: a.name || a.symbol || 'Position',
       symbol: (a.symbol || '').toUpperCase(),
-      kind: a.kind === 'other' ? 'other' : 'crypto',
+      isin: a.isin || '',
+      cgId: a.cgId || '',
       amount: n(a.amount),
       price: n(a.price),
+      buyValue: a.buyValue ? n(a.buyValue) : 0,
+      change: a.change ?? null,
       updatedAt: a.updatedAt || null,
     })),
+    pricesUpdatedAt: data.pricesUpdatedAt || null,
+  }
+  // Migration: Positionen ohne Konto einer Krypto-Wallet zuordnen
+  const looseAssets = out.assets.filter((a) => !a.accountId || !out.accounts.some((x) => x.id === a.accountId))
+  if (looseAssets.length) {
+    const wallet = { id: uid(), name: 'Krypto-Wallet', type: 'wallet', theme: 'black', last4: '', initialBalance: 0, limit: 0 }
+    out.accounts.push(wallet)
+    out.assets = out.assets.map((a) => {
+      if (!looseAssets.includes(a)) return a
+      const crypto = CRYPTO_BY_SYMBOL[a.symbol]
+      return { ...a, accountId: wallet.id, kind: crypto ? 'crypto' : a.kind, cgId: a.cgId || crypto?.id || '' }
+    })
   }
   // Migration v1 -> v2: Buchungen ohne Konto einem Hauptkonto zuordnen
   const orphans = out.transactions.filter((t) => !t.accountId || !out.accounts.some((a) => a.id === t.accountId))
@@ -96,6 +117,7 @@ function reducer(state, action) {
         ...state,
         accounts: state.accounts.filter((a) => a.id !== action.id),
         transactions: state.transactions.filter((t) => t.accountId !== action.id),
+        assets: state.assets.filter((a) => a.accountId !== action.id),
       }
 
     case 'pot/add':
@@ -119,13 +141,17 @@ function reducer(state, action) {
     case 'asset/add':
       return { ...state, assets: [...state.assets, { id: uid(), updatedAt: new Date().toISOString(), ...action.asset }] }
     case 'asset/update':
-      return { ...state, assets: state.assets.map((a) => (a.id === action.asset.id ? { ...a, ...action.asset, updatedAt: new Date().toISOString() } : a)) }
+      return { ...state, assets: state.assets.map((a) => (a.id === action.asset.id ? { ...a, ...action.asset } : a)) }
     case 'asset/delete':
       return { ...state, assets: state.assets.filter((a) => a.id !== action.id) }
     case 'asset/prices':
       return {
         ...state,
-        assets: state.assets.map((a) => (action.prices[a.id] != null ? { ...a, price: action.prices[a.id], updatedAt: new Date().toISOString() } : a)),
+        pricesUpdatedAt: new Date().toISOString(),
+        assets: state.assets.map((a) => {
+          const q = action.prices[a.id]
+          return q ? { ...a, price: q.price, change: q.change ?? null, updatedAt: q.time || new Date().toISOString() } : a
+        }),
       }
 
     case 'import':

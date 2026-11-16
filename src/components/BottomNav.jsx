@@ -1,10 +1,10 @@
-import { CreditCard, PiggyBank, Bitcoin, Plus } from 'lucide-react'
+import { CreditCard, PiggyBank, ChartLine, Plus } from 'lucide-react'
 
 const TABS = [
   { id: 'accounts', label: 'Konten', icon: CreditCard },
   null,
   { id: 'savings', label: 'Sparen', icon: PiggyBank },
-  { id: 'assets', label: 'Krypto', icon: Bitcoin },
+  { id: 'depot', label: 'Depot', icon: ChartLine },
 ]
 
 export default function BottomNav({ tab, onTab, onAdd }) {

@@ -6,10 +6,11 @@ import { Toast } from './components/ui'
 import { useStore } from './lib/store'
 import Accounts from './views/Accounts'
 import Savings from './views/Savings'
-import Assets from './views/Assets'
+import Depot from './views/Depot'
+import { usePriceUpdater } from './lib/prices'
 import Settings from './views/Settings'
 
-const TITLES = { accounts: 'Meine Konten', savings: 'Sparen', assets: 'Krypto & Assets' }
+const TITLES = { accounts: 'Meine Konten', savings: 'Sparen', depot: 'Depot & Krypto' }
 const getHashTab = () => {
   const h = location.hash.replace('#', '')
   return TITLES[h] ? h : 'accounts'
@@ -23,6 +24,9 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [toastMsg, setToastMsg] = useState('')
   const [selectedId, setSelectedId] = useState(() => { try { return localStorage.getItem(SEL_KEY) } catch { return null } })
+  const [detail, setDetail] = useState(false)
+  const [newAccount, setNewAccount] = useState(false)
+  const prices = usePriceUpdater()
   const toast = useCallback((m) => setToastMsg(m), [])
   const clearToast = useCallback(() => setToastMsg(''), [])
 
@@ -58,10 +62,12 @@ export default function App() {
 
       <main className="mx-auto max-w-lg px-4 pt-1">
         {tab === 'accounts' && (
-          <Accounts selectedId={selected?.id} onSelect={select} onBook={book} onEditTx={(t) => setTx({ editTx: t })} onTab={goTab} toast={toast} />
+          <Accounts selectedId={selected?.id} onSelect={select} onBook={book} onEditTx={(t) => setTx({ editTx: t })} onTab={goTab} toast={toast} detail={detail} setDetail={setDetail} newAccount={newAccount} setNewAccount={setNewAccount} />
         )}
         {tab === 'savings' && <Savings toast={toast} />}
-        {tab === 'assets' && <Assets toast={toast} />}
+        {tab === 'depot' && (
+          <Depot toast={toast} prices={prices} onNewAccount={() => { goTab('accounts'); setNewAccount(true) }} onOpenAccount={(id) => { select(id); goTab('accounts'); setDetail(true) }} />
+        )}
       </main>
 
       <BottomNav tab={tab} onTab={goTab} onAdd={() => book('expense')} />

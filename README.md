@@ -14,7 +14,7 @@ Dunkles Design, große Buttons für die Einhand-Bedienung, installierbar auf dem
 | **Konten** | Deine Konten als wischbare Bankkarten mit eigenem Namen, Kontoart, Kartendesign und optional den letzten 4 Ziffern. Karte antippen öffnet alle Buchungen der Karte (Monatsfilter, Eingänge/Ausgänge). Optionales monatliches Ausgabenlimit pro Karte mit Warnung. Ein- und Auszahlungen pro Konto, Kontostand jederzeit korrigierbar, Gesamtvermögen oben, Beträge per 👁 ausblendbar |
 | **Sparen** | Spartöpfe mit Zielbetrag & Deadline (inkl. „x € / Monat bis …“), Schnell-Buttons +10 / +25 / +50 / +100 € |
 | **Spaß am Sparen** | Spar-Level (🌱 bis 👑), wöchentliche Spar-Serie 🔥, Abzeichen für Meilensteine, Konfetti bei Einzahlungen, Level-Ups und erreichten Zielen |
-| **Krypto** | Manuelle Erfassung von BTC, XRP & Co.; optional Kursabruf über CoinGecko ohne API-Key |
+| **Depot** | Konten der Art *Depot* (z. B. Trade Republic) oder *Krypto-Wallet* (z. B. Ledger) mit Positionen. ETFs aus einer Liste (MSCI World, All-World, S&P 500 …) und Kryptowährungen bekommen ihren Kurs automatisch, der Wert landet direkt auf der Karte. Optional Kaufwert für Gewinn/Verlust |
 | **Backup** | JSON-Export / -Import, alles löschen |
 
 ## Auf dem Handy installieren
@@ -68,6 +68,13 @@ src/
     format.js             Euro-/Datumsformatierung, Betragseingabe
 .github/workflows/deploy.yml   Automatisches Deployment auf GitHub Pages
 ```
+
+## Automatische Kurse
+
+- **ETFs:** `scripts/fetch-prices.mjs` holt beim Build die Xetra-Kurse (Euro) aller Papiere aus `src/lib/instruments.js` und legt sie als `prices.json` neben die App. Der Workflow läuft Mo–Fr stündlich, am Wochenende alle 4 Stunden.
+- **Krypto:** live von CoinGecko im Browser, ohne API-Key (Fallback: `prices.json`).
+- Die App aktualisiert beim Öffnen, alle 10 Minuten und beim Zurückkehren.
+- Neues Papier? In `src/lib/instruments.js` mit ISIN und Yahoo-Ticker ergänzen.
 
 ## Deployment
 

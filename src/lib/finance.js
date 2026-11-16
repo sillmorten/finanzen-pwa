@@ -2,7 +2,14 @@ const sum = (arr, f = (x) => x) => arr.reduce((s, x) => s + f(x), 0)
 const signed = (t) => (t.type === 'income' ? t.amount : -t.amount)
 
 export const accountTx = (state, id) => state.transactions.filter((t) => t.accountId === id)
-export const accountBalance = (state, acc) => acc.initialBalance + sum(accountTx(state, acc.id), signed)
+/** Guthaben (Cash) eines Kontos */
+export const accountCash = (state, acc) => acc.initialBalance + sum(accountTx(state, acc.id), signed)
+/** Positionen eines Kontos */
+export const accountPositions = (state, id) => state.assets.filter((a) => a.accountId === id)
+export const positionValue = (p) => p.amount * p.price
+export const positionsValue = (state, id) => sum(accountPositions(state, id), positionValue)
+/** Kontostand = Cash + Wert aller Positionen */
+export const accountBalance = (state, acc) => accountCash(state, acc) + positionsValue(state, acc.id)
 export const accountsTotal = (state) => sum(state.accounts, (a) => accountBalance(state, a))
 
 /** Ein- und Ausgänge eines Kontos (oder aller Konten bei id = null) in einem Monat */
@@ -15,8 +22,8 @@ export function monthFlow(state, id, key) {
 
 export const potBalance = (pot) => sum(pot.history, (h) => h.amount)
 export const potsTotal = (state) => sum(state.pots, potBalance)
-export const assetsTotal = (state) => sum(state.assets, (a) => a.amount * a.price)
-export const netWorth = (state) => accountsTotal(state) + assetsTotal(state)
+export const assetsTotal = (state) => sum(state.assets, positionValue)
+export const netWorth = (state) => accountsTotal(state)
 
 /** Limit-Auslastung eines Kontos im Monat (null, wenn kein Limit) */
 export function limitUsage(state, acc, key) {

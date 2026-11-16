@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useStore } from '../lib/store'
 import { ACCOUNT_TYPES, CARD_THEMES } from '../lib/categories'
-import { accountBalance } from '../lib/finance'
+import { accountCash } from '../lib/finance'
+import { isInvest } from '../lib/categories'
 import { fmtNum, parseAmount, uid } from '../lib/format'
 import { Sheet, Field, inputCls, Button, ConfirmButton } from './ui'
 import BankCard from './BankCard'
@@ -9,7 +10,7 @@ import BankCard from './BankCard'
 export default function AccountSheet({ account, onClose, onCreated, toast }) {
   const { state, dispatch } = useStore()
   const isNew = !account
-  const currentBalance = account ? accountBalance(state, account) : 0
+  const currentBalance = account ? accountCash(state, account) : 0
   const [name, setName] = useState(account?.name || '')
   const [type, setType] = useState(account?.type || 'giro')
   const [theme, setTheme] = useState(account?.theme || CARD_THEMES[state.accounts.length % CARD_THEMES.length].id)
@@ -40,13 +41,16 @@ export default function AccountSheet({ account, onClose, onCreated, toast }) {
 
   return (
     <Sheet open onClose={onClose} title={isNew ? 'Neues Konto' : 'Konto bearbeiten'}>
-      <BankCard account={preview} balance={Number.isFinite(b) ? b : 0} />
+      <BankCard account={preview} balance={(Number.isFinite(b) ? b : 0) + (account ? state.assets.filter((x) => x.accountId === account.id).reduce((s, x) => s + x.amount * x.price, 0) : 0)} />
 
       <Field label="Name der Karte">
-        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Sparkasse Giro, Trade Republic" maxLength={32} />
+        <input className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="z. B. Sparkasse Giro, Trade Republic, Ledger" maxLength={32} />
       </Field>
 
-      <Field label={isNew ? 'Aktueller Kontostand' : 'Kontostand korrigieren'} hint={isNew ? undefined : 'Gib einfach ein, was gerade auf dem Konto ist.'}>
+      <Field
+        label={isInvest({ type }) ? (isNew ? 'Cash-Guthaben (optional)' : 'Cash-Guthaben korrigieren') : isNew ? 'Aktueller Kontostand' : 'Kontostand korrigieren'}
+        hint={isInvest({ type }) ? 'Nur das freie Guthaben. ETFs und Coins trägst du danach als Positionen ein, deren Wert kommt automatisch dazu.' : isNew ? undefined : 'Gib einfach ein, was gerade auf dem Konto ist.'}
+      >
         <div className="relative">
           <input inputMode="decimal" className={`${inputCls} text-2xl font-semibold h-14 pr-10 tabular`} value={balance} onChange={(e) => setBalance(e.target.value.replace(/[^\d.,-]/g, ''))} placeholder="0,00" />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl text-muted">€</span>

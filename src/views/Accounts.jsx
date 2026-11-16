@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Pencil, Eye, EyeOff } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountBalance, accountsTotal, assetsTotal, monthFlow, netWorth, limitUsage } from '../lib/finance'
+import { accountBalance, assetsTotal, monthFlow, netWorth, limitUsage } from '../lib/finance'
 import { fmtEUR, fmtEUR0, monthKey, monthLabel } from '../lib/format'
 import TxList, { sortTx } from '../components/TxList'
 import LimitBar from '../components/LimitBar'
@@ -11,11 +11,12 @@ import BankCard, { AddCard } from '../components/BankCard'
 import AccountSheet from '../components/AccountSheet'
 import SaveLevel from '../components/SaveLevel'
 
-export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab, toast }) {
+export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab, toast, detail, setDetail, newAccount, setNewAccount }) {
   const { state } = useStore()
-  const [edit, setEdit] = useState(null) // account | 'new'
+  const [editState, setEdit] = useState(null) // account | 'new'
+  const edit = newAccount ? 'new' : editState
+  const closeEdit = () => { setEdit(null); setNewAccount(false) }
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('finanzen-pwa:hide') === '1' } catch { return false } })
-  const [detail, setDetail] = useState(false)
   const scroller = useRef(null)
 
   const accounts = state.accounts
@@ -77,7 +78,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
         </button>
       </div>
       <div className="text-xs text-muted px-1 mt-0.5">
-        Konten {money(accountsTotal(state), fmtEUR0)}{state.assets.length > 0 && <> · Krypto & Assets {money(assetsTotal(state), fmtEUR0)}</>}
+        {state.accounts.length} {state.accounts.length === 1 ? 'Konto' : 'Konten'}{state.assets.length > 0 && <> · davon investiert {money(assetsTotal(state), fmtEUR0)}</>}
       </div>
 
       {/* Karten-Karussell */}
@@ -152,9 +153,9 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       )}
 
       {detail && selected && (
-        <CardDetail account={selected} hidden={hidden} onClose={() => setDetail(false)} onBook={onBook} onEditTx={onEditTx} onEditAccount={() => setEdit(selected)} />
+        <CardDetail account={selected} hidden={hidden} onClose={() => setDetail(false)} onBook={onBook} onEditTx={onEditTx} onEditAccount={() => setEdit(selected)} toast={toast} />
       )}
-      {edit && <AccountSheet account={edit === 'new' ? null : edit} onClose={() => setEdit(null)} onCreated={onSelect} toast={toast} />}
+      {edit && <AccountSheet account={edit === 'new' ? null : edit} onClose={closeEdit} onCreated={onSelect} toast={toast} />}
     </div>
   )
 }

@@ -5,8 +5,13 @@ export const ACCOUNT_TYPES = [
   { id: 'tagesgeld', label: 'Tagesgeld' },
   { id: 'kredit', label: 'Kreditkarte' },
   { id: 'depot', label: 'Depot' },
+  { id: 'wallet', label: 'Krypto-Wallet' },
   { id: 'bar', label: 'Bargeld' },
 ]
+/** Kontoarten mit Wertpapier-/Krypto-Positionen */
+export const INVEST_TYPES = ['depot', 'wallet']
+export const isInvest = (acc) => INVEST_TYPES.includes(acc?.type)
+
 export const accountTypeLabel = (id) => ACCOUNT_TYPES.find((t) => t.id === id)?.label ?? 'Konto'
 
 /** Kartendesigns (Verlauf) */
@@ -31,9 +36,3 @@ export const POT_PRESETS = [
 
 export const POT_COLORS = ['#34d399', '#60a5fa', '#f59e0b', '#a78bfa', '#f472b6', '#2dd4bf', '#facc15', '#fb923c']
 
-/** Für optionale Kursabfrage (CoinGecko, ohne API-Key) */
-export const COINGECKO_IDS = {
-  BTC: 'bitcoin', ETH: 'ethereum', XRP: 'ripple', SOL: 'solana', ADA: 'cardano', DOGE: 'dogecoin',
-  DOT: 'polkadot', LTC: 'litecoin', LINK: 'chainlink', XLM: 'stellar', USDT: 'tether', USDC: 'usd-coin',
-  BNB: 'binancecoin', AVAX: 'avalanche-2', TRX: 'tron',
-}
