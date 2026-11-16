@@ -5,3 +5,4 @@ dev-dist
 *.local
 public/prices.json
 public/history.json
+public/ocr/

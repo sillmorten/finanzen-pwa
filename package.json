@@ -4,17 +4,19 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "dev": "node scripts/copy-ocr.mjs && vite",
+    "build": "node scripts/copy-ocr.mjs && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "lucide-react": "^1.73.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "tesseract.js": "^6.0.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.5",
+    "@tesseract.js-data/deu": "^1.0.0",
     "@vitejs/plugin-react": "^6.3.0",
     "tailwindcss": "^4.3.5",
     "vite": "^8.3.8",

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import { Camera, Loader2 } from 'lucide-react'
 import { Sheet, AmountInput, Segmented, Field, inputCls, Button, ConfirmButton } from './ui'
 import { parseAmount, todayISO, fmtNum } from '../lib/format'
 import { useStore } from '../lib/store'
@@ -20,6 +21,29 @@ function Inner({ onClose, editTx, defaults, onSaved }) {
   const [amount, setAmount] = useState(editTx ? fmtNum(editTx.amount) : '')
   const [note, setNote] = useState(editTx?.note || '')
   const [date, setDate] = useState(editTx?.date || todayISO())
+
+  const fileRef = useRef(null)
+  const [scan, setScan] = useState(null) // { busy, status, progress, result, error }
+
+  const onPhoto = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setScan({ busy: true, status: 'Bild wird vorbereitet', progress: 0 })
+    try {
+      const { scanReceipt } = await import('../lib/receipt')
+      const r = await scanReceipt(file, (p) => setScan((s) => ({ ...s, busy: true, ...p })))
+      setType('expense')
+      if (r.amount) setAmount(fmtNum(r.amount))
+      if (r.store) setNote(r.store)
+      if (r.date) setDate(r.date)
+      setScan({ busy: false, result: r })
+      vibrate(15)
+    } catch (err) {
+      console.error(err)
+      setScan({ busy: false, error: 'Texterkennung hat nicht geklappt. Versuch es mit mehr Licht oder tipp den Betrag ein.' })
+    }
+  }
 
   const value = parseAmount(amount)
   const valid = Number.isFinite(value) && value > 0 && accountId
@@ -70,6 +94,35 @@ function Inner({ onClose, editTx, defaults, onSaved }) {
           { value: 'expense', label: 'Auszahlung', activeCls: 'bg-spend/20 text-spend' },
         ]}
       />
+      {!editTx && (
+        <>
+          <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onPhoto} />
+          <button type="button" disabled={scan?.busy} onClick={() => fileRef.current?.click()} className="mt-3 w-full flex items-center justify-center gap-2 rounded-2xl border border-dashed border-line min-h-12 text-sm text-white/85 active:bg-surface-2 disabled:opacity-60">
+            {scan?.busy ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
+            {scan?.busy ? `${scan.status} … ${Math.round((scan.progress || 0) * 100)} %` : 'Kassenbon fotografieren'}
+          </button>
+          {scan?.result && (
+            <div className="mt-2 rounded-2xl bg-surface-2 p-3 text-sm">
+              {scan.result.amount ? (
+                <>
+                  <div>Erkannt: <b className="tabular">{fmtNum(scan.result.amount)} €</b>{scan.result.store && <> bei <b>{scan.result.store}</b></>}. Bitte kurz prüfen.</div>
+                  {scan.result.candidates.length > 1 && (
+                    <div className="flex flex-wrap items-center gap-1.5 mt-2 text-xs text-muted">
+                      Anderer Betrag?
+                      {scan.result.candidates.slice(1).map((v) => (
+                        <button key={v} type="button" onClick={() => setAmount(fmtNum(v))} className="rounded-full border border-line px-2.5 min-h-8 text-white tabular active:bg-surface">{fmtNum(v)} €</button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-muted">Keinen Betrag gefunden. Tipp ihn bitte ein.</div>
+              )}
+            </div>
+          )}
+          {scan?.error && <div className="mt-2 rounded-2xl bg-spend/10 text-spend p-3 text-sm">{scan.error}</div>}
+        </>
+      )}
       <div className="mt-4">
         <AmountInput value={amount} onChange={setAmount} autoFocus={!editTx} color={type === 'expense' ? 'text-spend' : 'text-save'} onKeyDown={(e) => e.key === 'Enter' && save()} />
       </div>
