@@ -126,30 +126,18 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
             </Card>
           ) : (
           <>
-          <div className="grid grid-cols-4 gap-2 mt-4">
-            <Action icon={<ArrowDownLeft size={22} />} label="Einzahlen" cls="text-save" onClick={() => onBook('income')} />
-            <Action icon={<ArrowUpRight size={22} />} label="Auszahlen" cls="text-spend" onClick={() => onBook('expense')} />
-            <Action icon={<Pencil size={20} />} label="Bearbeiten" cls="text-white/85" onClick={() => setEdit(selected)} />
-            <Action icon={<Lock size={20} />} label="Sperren" cls="text-amber-300" onClick={() => toggleLock(selected)} />
-          </div>
-
           {usage && <div className="mt-3"><LimitBar usage={usage} hidden={hidden} onClick={() => setDetail(true)} /></div>}
-          <p className="text-xs text-muted text-center mt-3">Tipp: Karte antippen für alle Buchungen</p>
           </>
           )}
         </>
       )}
-
-      {/* Spar-Level */}
-      <SectionTitle action={<button onClick={() => onTab('savings')} className="text-sm text-save min-h-9 px-1">Sparziele →</button>}>Dein Spar-Level</SectionTitle>
-      <SaveLevel compact onClick={() => onTab('savings')} />
 
       {/* Letzte Bewegungen */}
       {selected && !locked && (
         <>
           <SectionTitle action={txs.length > 0 && <button onClick={() => setDetail(true)} className="text-sm text-save min-h-9 px-1">Alle →</button>}>Letzte Buchungen</SectionTitle>
           {txs.length === 0 ? (
-            <Card><p className="text-sm text-muted text-center py-4">Noch keine Buchungen. Tippe auf Einzahlung oder Auszahlung.</p></Card>
+            <Card><p className="text-sm text-muted text-center py-4">Noch keine Buchungen. Tippe unten auf +.</p></Card>
           ) : (
             <>
               <TxList txs={txs.slice(0, 5)} onEdit={onEditTx} hidden={hidden} />
