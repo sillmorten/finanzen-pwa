@@ -2,7 +2,7 @@ import { cardTheme, accountTypeLabel } from '../lib/categories'
 import { fmtEUR } from '../lib/format'
 
 /** Bankkarte im Stil bekannter Banking-Apps */
-export default function BankCard({ account, balance, hidden = false, className = '', ...rest }) {
+export default function BankCard({ account, balance, perf = null, hidden = false, className = '', ...rest }) {
   const theme = cardTheme(account.theme)
   return (
     <div
@@ -20,7 +20,7 @@ export default function BankCard({ account, balance, hidden = false, className =
             <div className="text-lg font-semibold leading-tight truncate drop-shadow-sm">{account.name}</div>
             <div className="text-xs text-white/75 mt-0.5">{accountTypeLabel(account.type)}</div>
           </div>
-          <Contactless />
+          {perf ? <PerfPill perf={perf} hidden={hidden} /> : <Contactless />}
         </div>
 
         <Chip />
@@ -33,6 +33,20 @@ export default function BankCard({ account, balance, hidden = false, className =
           {account.last4 && <div className="text-xs font-medium tracking-[0.15em] text-white/85 tabular shrink-0 pb-1">•••• {account.last4}</div>}
         </div>
       </div>
+    </div>
+  )
+}
+
+function PerfPill({ perf, hidden }) {
+  const up = perf.value >= 0
+  const pct = `${up ? '+' : ''}${perf.pct.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`
+  return (
+    <div className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold tabular backdrop-blur-sm ${up ? 'bg-emerald-400/90 text-emerald-950' : 'bg-red-400/90 text-red-950'}`}>
+      <div className="flex items-center gap-1">
+        <span>{up ? '▲' : '▼'}</span>
+        <span>{hidden ? pct : `${up ? '+' : '−'}${fmtEUR(Math.abs(perf.value))}`}</span>
+      </div>
+      {!hidden && <div className="text-[10px] font-semibold opacity-80 text-right">{pct} {perf.label}</div>}
     </div>
   )
 }

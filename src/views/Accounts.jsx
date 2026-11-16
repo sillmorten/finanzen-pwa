@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Pencil, Eye, EyeOff } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountBalance, assetsTotal, monthFlow, netWorth, limitUsage } from '../lib/finance'
+import { accountPerformance, accountBalance, assetsTotal, monthFlow, netWorth, limitUsage } from '../lib/finance'
 import { fmtEUR, fmtEUR0, monthKey, monthLabel } from '../lib/format'
 import TxList, { sortTx } from '../components/TxList'
 import LimitBar from '../components/LimitBar'
@@ -89,7 +89,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       >
         {accounts.map((a) => (
           <div key={a.id} className={`snap-center shrink-0 w-[84%] transition-transform duration-300 ${a.id === selected?.id ? 'scale-100' : 'scale-[0.94] opacity-70'}`}>
-            <BankCard account={a} balance={accountBalance(state, a)} hidden={hidden} onClick={() => { onSelect(a.id); setDetail(true) }} className="cursor-pointer active:scale-[0.98] transition-transform" />
+            <BankCard account={a} balance={accountBalance(state, a)} perf={accountPerformance(state, a.id)} hidden={hidden} onClick={() => { onSelect(a.id); setDetail(true) }} className="cursor-pointer active:scale-[0.98] transition-transform" />
           </div>
         ))}
         <div className="snap-center shrink-0 w-[84%]">

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Pencil, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountBalance, monthFlow, limitUsage } from '../lib/finance'
+import { accountPerformance, accountBalance, monthFlow, limitUsage } from '../lib/finance'
 import { fmtEUR0, monthKey, monthLabel, shiftMonth } from '../lib/format'
 import { Card, Segmented } from '../components/ui'
 import BankCard from '../components/BankCard'
@@ -55,7 +55,7 @@ export default function CardDetail({ account, hidden, onClose, onBook, onEditTx,
       </header>
 
       <div className="mx-auto max-w-lg px-4 pb-32">
-        <div className="px-[4%]"><BankCard account={account} balance={accountBalance(state, account)} hidden={hidden} /></div>
+        <div className="px-[4%]"><BankCard account={account} balance={accountBalance(state, account)} perf={accountPerformance(state, account.id)} hidden={hidden} /></div>
 
         {invest && (
           <>

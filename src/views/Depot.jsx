@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, RefreshCw } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountCash, accountPositions, positionsValue, assetsTotal } from '../lib/finance'
+import { accountCash, accountPositions, positionsValue, assetsTotal, accountPerformance } from '../lib/finance'
 import { isInvest, cardTheme, accountTypeLabel } from '../lib/categories'
 import { fmtEUR, fmtEUR0 } from '../lib/format'
 import { timeAgo } from '../lib/prices'
@@ -55,6 +55,7 @@ export default function Depot({ toast, prices, onNewAccount, onOpenAccount }) {
       {accounts.map((acc) => {
         const pos = accountPositions(state, acc.id)
         const cash = accountCash(state, acc)
+        const perf = accountPerformance(state, acc.id)
         return (
           <div key={acc.id}>
             <SectionTitle action={<button onClick={() => setEdit({ accountId: acc.id })} className="flex items-center gap-1 text-sm text-save min-h-9 px-1"><Plus size={16} /> Position</button>}>
@@ -64,7 +65,10 @@ export default function Depot({ toast, prices, onNewAccount, onOpenAccount }) {
               </button>
             </SectionTitle>
             <div className="flex justify-between text-xs text-muted px-1 mb-2">
-              <span>{accountTypeLabel(acc.type)} · {pos.length} {pos.length === 1 ? 'Position' : 'Positionen'}</span>
+              <span>
+                {accountTypeLabel(acc.type)} · {pos.length} {pos.length === 1 ? 'Position' : 'Positionen'}
+                {perf && <span className={perf.value >= 0 ? 'text-save' : 'text-spend'}> · {perf.value >= 0 ? '▲ +' : '▼ '}{perf.pct.toLocaleString('de-DE', { maximumFractionDigits: 1 })} % {perf.label}</span>}
+              </span>
               <span className="tabular">{fmtEUR0(positionsValue(state, acc.id))}{cash !== 0 && ` + ${fmtEUR0(cash)} Cash`}</span>
             </div>
             {pos.length ? (

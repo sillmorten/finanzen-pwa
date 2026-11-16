@@ -31,3 +31,25 @@ export function limitUsage(state, acc, key) {
   const spent = monthFlow(state, acc.id, key).expense
   return { spent, limit: acc.limit, left: acc.limit - spent, pct: (spent / acc.limit) * 100, over: spent > acc.limit }
 }
+
+/**
+ * Wertentwicklung eines Depots / einer Wallet:
+ * - seit Kauf (wenn Kaufwerte eingetragen sind), sonst
+ * - heute (Tagesveränderung der Kurse)
+ */
+export function accountPerformance(state, id) {
+  const pos = accountPositions(state, id)
+  if (!pos.length) return null
+  const withBuy = pos.filter((p) => p.buyValue > 0)
+  if (withBuy.length) {
+    const cost = sum(withBuy, (p) => p.buyValue)
+    const gain = sum(withBuy, (p) => positionValue(p) - p.buyValue)
+    return { value: gain, pct: (gain / cost) * 100, label: 'seit Kauf' }
+  }
+  const withChange = pos.filter((p) => p.change != null)
+  if (!withChange.length) return null
+  const now = sum(withChange, positionValue)
+  const before = sum(withChange, (p) => positionValue(p) / (1 + p.change / 100))
+  const gain = now - before
+  return { value: gain, pct: before ? (gain / before) * 100 : 0, label: 'heute' }
+}
