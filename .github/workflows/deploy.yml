@@ -4,6 +4,10 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Kurse automatisch aktualisieren: stündlich Mo–Fr während der Börsenzeiten, sonst alle 4 Stunden
+  schedule:
+    - cron: '17 6-20 * * 1-5'
+    - cron: '17 */4 * * 0,6'
 
 permissions:
   contents: read
@@ -24,6 +28,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Kurse abrufen
+        run: node scripts/fetch-prices.mjs
       - run: npm run build
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
