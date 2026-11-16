@@ -17,6 +17,8 @@ export const emptyState = () => ({
   pots: [],
   /** Vermögenswerte: { id, name, symbol, kind: 'crypto'|'other', amount, price, updatedAt } */
   assets: [],
+  /** Wunschliste: { id, name, emoji, price, need: 'need'|'want', createdAt, potId } */
+  wishes: [],
 })
 
 function load() {
@@ -58,6 +60,15 @@ export function normalize(data) {
       target: Math.abs(n(p.target)),
       deadline: p.deadline || '',
       history: arr(p.history).map((h) => ({ id: h.id || uid(), amount: n(h.amount), date: h.date || todayISO(), note: h.note || '' })),
+    })),
+    wishes: arr(data.wishes).map((w) => ({
+      id: w.id || uid(),
+      name: w.name || 'Wunsch',
+      emoji: w.emoji || '🎁',
+      price: Math.abs(n(w.price)),
+      need: w.need === 'need' ? 'need' : 'want',
+      createdAt: w.createdAt || todayISO(),
+      potId: w.potId || null,
     })),
     /** Positionen: { id, accountId, kind: 'etf'|'crypto'|'other', name, symbol, isin, cgId, amount, price, buyValue, change, updatedAt } */
     assets: arr(data.assets).map((a) => ({
@@ -126,6 +137,12 @@ function reducer(state, action) {
       return { ...state, pots: [...state.pots, { id: uid(), history: [], ...action.pot }] }
     case 'pot/update':
       return { ...state, pots: state.pots.map((p) => (p.id === action.pot.id ? { ...p, ...action.pot } : p)) }
+    case 'wish/add':
+      return { ...state, wishes: [...state.wishes, { id: uid(), createdAt: todayISO(), potId: null, ...action.wish }] }
+    case 'wish/update':
+      return { ...state, wishes: state.wishes.map((w) => (w.id === action.wish.id ? { ...w, ...action.wish } : w)) }
+    case 'wish/delete':
+      return { ...state, wishes: state.wishes.filter((w) => w.id !== action.id) }
     case 'pot/delete':
       return { ...state, pots: state.pots.filter((p) => p.id !== action.id) }
     case 'pot/move':

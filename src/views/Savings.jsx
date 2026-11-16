@@ -6,6 +6,7 @@ import { fmtEUR, fmtEUR0, parseAmount, monthsUntil, fmtNum } from '../lib/format
 import { POT_PRESETS, POT_COLORS } from '../lib/categories'
 import { Card, Progress, Sheet, Field, inputCls, Button, AmountInput, ConfirmButton, Empty, Segmented, SectionTitle } from '../components/ui'
 import SaveLevel from '../components/SaveLevel'
+import WishList from '../components/WishList'
 import { levelFor, badges, randomCheer } from '../lib/gamify'
 import { confetti, vibrate } from '../lib/confetti'
 
@@ -65,6 +66,8 @@ export default function Savings({ toast }) {
       <Button variant="outline" className="w-full mt-4 flex items-center justify-center gap-2" onClick={() => setEdit('new')}>
         <Plus size={20} /> Neuer Spartopf
       </Button>
+
+      <WishList toast={toast} />
 
       <SectionTitle>Abzeichen · {badges(state).filter((b) => b.done).length}/{badges(state).length}</SectionTitle>
       <div className="grid grid-cols-3 gap-2">

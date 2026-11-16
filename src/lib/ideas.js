@@ -92,3 +92,55 @@ export function analyze(state, bufferMonths = 3) {
 }
 
 const fmt = (n) => Math.round(n).toLocaleString('de-DE') + ' €'
+
+const EMOJI = [
+  [/controller|konsole|playstation|ps5|xbox|switch|spiel|game/i, '🎮'],
+  [/wasch|trockner|spül|kühlschrank|herd|staubsauger/i, '🧺'],
+  [/bildschirm|monitor|fernseher|tv/i, '🖥️'],
+  [/handy|iphone|smartphone|samsung|pixel/i, '📱'],
+  [/laptop|pc|computer|macbook|rechner/i, '💻'],
+  [/kopfhörer|airpods|headset|lautsprecher|box/i, '🎧'],
+  [/auto|reifen|führerschein/i, '🚗'],
+  [/rad|fahrrad|e-bike/i, '🚲'],
+  [/urlaub|reise|flug/i, '✈️'],
+  [/schuh|jacke|kleidung|sneaker/i, '👟'],
+  [/uhr|watch/i, '⌚'],
+  [/sofa|bett|möbel|stuhl|tisch|schreibtisch/i, '🛋️'],
+]
+export const guessEmoji = (name) => EMOJI.find(([re]) => re.test(name))?.[1] || '🎁'
+
+const daysSince = (iso) => Math.floor((Date.now() - new Date(iso + 'T00:00:00').getTime()) / 86400000)
+const WAIT_DAYS = 30
+
+/**
+ * Einschätzung eines Wunsches:
+ * good (✅) | wait (⏳) | save (🎯) | no (✋)
+ */
+export function wishVerdict(state, wish) {
+  const r = analyze(state, 3)
+  const pot = wish.potId ? state.pots.find((p) => p.id === wish.potId) : null
+  const potBal = pot ? pot.history.reduce((s, h) => s + h.amount, 0) : 0
+  const free = Math.max(0, r.giroIdle - Math.max(0, r.buffer - r.safe)) + potBal
+  const price = wish.price
+  const waited = daysSince(wish.createdAt)
+  const missing = Math.max(0, price - free)
+  const months = r.avgSurplus > 0 ? Math.ceil(missing / r.avgSurplus) : null
+  const monthsTxt = months ? `Mit deinem Ø-Überschuss von ${fmt(r.avgSurplus)} hast du es in ca. ${months} ${months === 1 ? 'Monat' : 'Monaten'} zusammen.` : 'Leg einen Spartopf dafür an, dann siehst du, wann du es dir leisten kannst.'
+  const share = r.avgSurplus > 0 ? price / r.avgSurplus : null
+
+  if (pot && potBal >= price) {
+    return { kind: 'good', label: 'Gute Idee', text: `Dein Spartopf „${pot.name}“ ist voll. Du hast es dir erspart, gönn dir!` }
+  }
+  if (missing === 0) {
+    if (wish.need === 'need') return { kind: 'good', label: 'Gute Idee', text: 'Du brauchst es und kannst es bezahlen, ohne deinen Notgroschen anzufassen.' }
+    if (price < 30) return { kind: 'good', label: 'Passt', text: 'Kleiner Betrag, den du locker übrig hast. Gönn dir.' }
+    if (waited < WAIT_DAYS) {
+      return { kind: 'wait', label: `Warte noch ${WAIT_DAYS - waited} Tage`, text: `Leisten kannst du es. Aber 30-Tage-Regel: Willst du es danach immer noch, ist es ein echter Wunsch und kein Impulskauf.${share && share > 1 ? ` Das sind übrigens ${share.toLocaleString('de-DE', { maximumFractionDigits: 1 })} Monate Überschuss.` : ''}` }
+    }
+    return { kind: 'good', label: 'Gönn dir', text: `Du willst es seit ${waited} Tagen und es ist bezahlbar, ohne den Notgroschen anzufassen. Sieht nach einem echten Wunsch aus.` }
+  }
+  if (wish.need === 'need') {
+    return { kind: 'save', label: 'Gezielt drauf sparen', text: `Dir fehlen noch ≈ ${fmt(missing)}, ohne deinen Notgroschen anzugreifen. ${monthsTxt} Ist es ein Notfall (z. B. Waschmaschine kaputt), dafür ist der Notgroschen da.` }
+  }
+  return { kind: 'no', label: 'Lieber noch nicht', text: `Würde gerade an deinen Notgroschen oder dein Alltagsgeld gehen, es fehlen ≈ ${fmt(missing)}. ${monthsTxt}` }
+}
