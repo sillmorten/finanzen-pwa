@@ -69,13 +69,6 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
   const open = state.accounts.filter((a) => !a.locked)
   const investAccs = open.filter(isInvest)
   const available = open.filter((a) => !isInvest(a)).reduce((sum, a) => sum + accountBalance(state, a), 0)
-  const invested = investAccs.reduce((sum, a) => sum + accountBalance(state, a), 0)
-  const investToday = (() => {
-    const perfs = investAccs.map((a) => accountPerformance(state, a.id)).filter(Boolean)
-    if (!perfs.length) return null
-    const label = perfs.every((p) => p.label === perfs[0].label) ? perfs[0].label : ''
-    return { value: perfs.reduce((s2, p) => s2 + p.value, 0), label }
-  })()
   const { toggleLock } = useLock()
   const [reorder, setReorder] = useState(false)
   const locked = !!selected?.locked
@@ -95,16 +88,21 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
         </button>
       </div>
       {investAccs.length > 0 && (
-        <button onClick={() => onTab('depot')} className="mt-3 w-full flex items-center justify-between rounded-2xl bg-surface border border-line/60 px-4 min-h-14 active:bg-surface-2">
-          <span className="flex items-center gap-2.5">
-            <span className="flex -space-x-1.5">{investAccs.map((a) => <span key={a.id} className="h-4 w-6 rounded ring-2 ring-surface" style={{ background: cardTheme(a.theme).bg }} />)}</span>
-            <span className="text-sm text-muted">Investiert</span>
-          </span>
-          <span className="text-right">
-            <span className="block font-semibold tabular">{money(invested)}</span>
-            {investToday && !hidden && <span className={`block text-xs tabular ${investToday.value >= 0 ? 'text-save' : 'text-spend'}`}>{investToday.value >= 0 ? '▲ +' : '▼ '}{fmtEUR(investToday.value)} {investToday.label}</span>}
-          </span>
-        </button>
+        <div className={`mt-3 grid gap-2 ${investAccs.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          {investAccs.map((a) => {
+            const perf = accountPerformance(state, a.id)
+            return (
+              <button key={a.id} onClick={() => onTab('depot')} className="rounded-2xl bg-surface border border-line/60 px-3.5 py-3 text-left active:bg-surface-2 min-w-0">
+                <span className="flex items-center gap-2 text-xs text-muted min-w-0">
+                  <span className="h-3 w-[18px] rounded-[3px] shrink-0" style={{ background: cardTheme(a.theme).bg }} />
+                  <span className="truncate">{a.name}</span>
+                </span>
+                <span className="block font-semibold tabular mt-1">{money(accountBalance(state, a))}</span>
+                {perf && !hidden && <span className={`block text-xs tabular ${perf.value >= 0 ? 'text-save' : 'text-spend'}`}>{perf.value >= 0 ? '▲ +' : '▼ '}{fmtEUR(perf.value)}</span>}
+              </button>
+            )
+          })}
+        </div>
       )}
 
       {/* Karten-Karussell */}
