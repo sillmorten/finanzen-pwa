@@ -13,6 +13,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Finanzen – Spar- & Ausgabenmanager',
@@ -34,6 +35,8 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,webmanifest}'],
         globIgnores: ['ocr/**'],
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],
