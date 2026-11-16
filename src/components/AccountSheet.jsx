@@ -75,9 +75,12 @@ export default function AccountSheet({ account, onClose, onCreated, toast }) {
       </Field>
 
       <Field label="Kartendesign">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           {CARD_THEMES.map((t) => (
-            <button key={t.id} type="button" onClick={() => setTheme(t.id)} aria-label={t.label} className={`h-12 rounded-xl border-2 ${theme === t.id ? 'border-white' : 'border-transparent'}`} style={{ background: t.bg }} />
+            <button key={t.id} type="button" onClick={() => setTheme(t.id)} aria-label={t.label} className="flex flex-col items-center gap-1">
+              <span className={`w-full aspect-[1.586] rounded-lg ring-2 ring-offset-2 ring-offset-surface ${theme === t.id ? 'ring-white' : 'ring-transparent'}`} style={{ background: t.bg, boxShadow: 'inset 0 1px 0 rgba(255,255,255,.3)' }} />
+              <span className={`text-[10px] ${theme === t.id ? 'text-white' : 'text-muted'}`}>{t.label}</span>
+            </button>
           ))}
         </div>
       </Field>
