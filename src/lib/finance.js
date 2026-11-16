@@ -17,3 +17,10 @@ export const potBalance = (pot) => sum(pot.history, (h) => h.amount)
 export const potsTotal = (state) => sum(state.pots, potBalance)
 export const assetsTotal = (state) => sum(state.assets, (a) => a.amount * a.price)
 export const netWorth = (state) => accountsTotal(state) + assetsTotal(state)
+
+/** Limit-Auslastung eines Kontos im Monat (null, wenn kein Limit) */
+export function limitUsage(state, acc, key) {
+  if (!acc?.limit) return null
+  const spent = monthFlow(state, acc.id, key).expense
+  return { spent, limit: acc.limit, left: acc.limit - spent, pct: (spent / acc.limit) * 100, over: spent > acc.limit }
+}

@@ -41,6 +41,7 @@ export function normalize(data) {
       theme: a.theme || 'emerald',
       last4: String(a.last4 || '').replace(/\D/g, '').slice(-4),
       initialBalance: n(a.initialBalance),
+      limit: Math.abs(n(a.limit)),
     })),
     transactions: arr(data.transactions)
       .filter((t) => t && (t.type === 'income' || t.type === 'expense'))

@@ -15,22 +15,24 @@ export default function AccountSheet({ account, onClose, onCreated, toast }) {
   const [theme, setTheme] = useState(account?.theme || CARD_THEMES[state.accounts.length % CARD_THEMES.length].id)
   const [last4, setLast4] = useState(account?.last4 || '')
   const [balance, setBalance] = useState(account ? fmtNum(currentBalance) : '')
+  const [limit, setLimit] = useState(account?.limit ? fmtNum(account.limit) : '')
 
   const b = balance.trim() === '' ? 0 : parseAmount(balance)
-  const valid = name.trim() && Number.isFinite(b)
+  const l = limit.trim() === '' ? 0 : parseAmount(limit)
+  const valid = name.trim() && Number.isFinite(b) && Number.isFinite(l) && l >= 0
   const preview = { name: name || 'Mein Konto', type, theme, last4 }
 
   const save = () => {
     if (!valid) return
     if (isNew) {
       const id = uid()
-      dispatch({ type: 'acc/add', id, account: { name: name.trim(), type, theme, last4, initialBalance: b } })
+      dispatch({ type: 'acc/add', id, account: { name: name.trim(), type, theme, last4, limit: l, initialBalance: b } })
       toast('Konto angelegt')
       onCreated?.(id)
     } else {
       // Kontostand-Korrektur: Startsaldo so anpassen, dass der eingegebene Stand stimmt
       const initialBalance = account.initialBalance + (b - currentBalance)
-      dispatch({ type: 'acc/update', account: { id: account.id, name: name.trim(), type, theme, last4, initialBalance } })
+      dispatch({ type: 'acc/update', account: { id: account.id, name: name.trim(), type, theme, last4, limit: l, initialBalance } })
       toast('Konto gespeichert')
     }
     onClose()
@@ -48,6 +50,13 @@ export default function AccountSheet({ account, onClose, onCreated, toast }) {
         <div className="relative">
           <input inputMode="decimal" className={`${inputCls} text-2xl font-semibold h-14 pr-10 tabular`} value={balance} onChange={(e) => setBalance(e.target.value.replace(/[^\d.,-]/g, ''))} placeholder="0,00" />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl text-muted">€</span>
+        </div>
+      </Field>
+
+      <Field label="Monatliches Ausgabenlimit (optional)" hint="Du siehst, wie viel du diesen Monat noch ausgeben kannst, und wirst gewarnt, wenn du drüber bist.">
+        <div className="relative">
+          <input inputMode="decimal" className={`${inputCls} tabular pr-10`} value={limit} onChange={(e) => setLimit(e.target.value.replace(/[^\d.,]/g, ''))} placeholder="z. B. 500" />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 text-muted">€</span>
         </div>
       </Field>
 

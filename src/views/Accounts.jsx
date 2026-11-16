@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Pencil, Eye, EyeOff } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountBalance, accountsTotal, assetsTotal, monthFlow, netWorth, potsTotal } from '../lib/finance'
-import { fmtEUR, fmtEUR0, monthKey, monthLabel, dateLabel } from '../lib/format'
+import { accountBalance, accountsTotal, assetsTotal, monthFlow, netWorth, limitUsage } from '../lib/finance'
+import { fmtEUR, fmtEUR0, monthKey, monthLabel } from '../lib/format'
+import TxList, { sortTx } from '../components/TxList'
+import LimitBar from '../components/LimitBar'
+import CardDetail from './CardDetail'
 import { Card, SectionTitle, Button } from '../components/ui'
 import BankCard, { AddCard } from '../components/BankCard'
 import AccountSheet from '../components/AccountSheet'
@@ -12,7 +15,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
   const { state } = useStore()
   const [edit, setEdit] = useState(null) // account | 'new'
   const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('finanzen-pwa:hide') === '1' } catch { return false } })
-  const [showAll, setShowAll] = useState(false)
+  const [detail, setDetail] = useState(false)
   const scroller = useRef(null)
 
   const accounts = state.accounts
@@ -55,15 +58,9 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
 
   const txs = useMemo(() => {
     if (!selected) return []
-    return state.transactions.filter((t) => t.accountId === selected.id).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    return state.transactions.filter((t) => t.accountId === selected.id).sort(sortTx)
   }, [state.transactions, selected])
-  const visible = showAll ? txs : txs.slice(0, 8)
-  const groups = []
-  for (const t of visible) {
-    const g = groups[groups.length - 1]
-    if (g && g.date === t.date) g.items.push(t)
-    else groups.push({ date: t.date, items: [t] })
-  }
+  const usage = selected ? limitUsage(state, selected, key) : null
 
   const money = (v, f = fmtEUR) => (hidden ? '•••••' : f(v))
 
@@ -91,7 +88,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       >
         {accounts.map((a) => (
           <div key={a.id} className={`snap-center shrink-0 w-[84%] transition-transform duration-300 ${a.id === selected?.id ? 'scale-100' : 'scale-[0.94] opacity-70'}`}>
-            <BankCard account={a} balance={accountBalance(state, a)} hidden={hidden} onClick={() => onSelect(a.id)} />
+            <BankCard account={a} balance={accountBalance(state, a)} hidden={hidden} onClick={() => { onSelect(a.id); setDetail(true) }} className="cursor-pointer active:scale-[0.98] transition-transform" />
           </div>
         ))}
         <div className="snap-center shrink-0 w-[84%]">
@@ -130,6 +127,8 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
               <div className="text-lg font-semibold text-spend tabular">−{money(flow.expense, fmtEUR0)}</div>
             </Card>
           </div>
+          {usage && <div className="mt-2"><LimitBar usage={usage} hidden={hidden} onClick={() => setDetail(true)} /></div>}
+          <p className="text-xs text-muted text-center mt-3">Tipp: Karte antippen für alle Buchungen</p>
         </>
       )}
 
@@ -137,42 +136,24 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       <SectionTitle action={<button onClick={() => onTab('savings')} className="text-sm text-save min-h-9 px-1">Sparziele →</button>}>Dein Spar-Level</SectionTitle>
       <SaveLevel compact onClick={() => onTab('savings')} />
 
-      {/* Bewegungen */}
+      {/* Letzte Bewegungen */}
       {selected && (
         <>
-          <SectionTitle>Bewegungen · {selected.name}</SectionTitle>
+          <SectionTitle action={txs.length > 0 && <button onClick={() => setDetail(true)} className="text-sm text-save min-h-9 px-1">Alle →</button>}>Letzte Buchungen</SectionTitle>
           {txs.length === 0 ? (
-            <Card><p className="text-sm text-muted text-center py-4">Noch keine Bewegungen. Tippe auf Einzahlung oder Auszahlung.</p></Card>
+            <Card><p className="text-sm text-muted text-center py-4">Noch keine Buchungen. Tippe auf Einzahlung oder Auszahlung.</p></Card>
           ) : (
             <>
-              {groups.map((g) => (
-                <div key={g.date} className="mb-3">
-                  <div className="text-xs text-muted px-1 mb-1.5">{dateLabel(g.date)}</div>
-                  <Card className="!p-0 divide-y divide-line/60 overflow-hidden">
-                    {g.items.map((t) => (
-                      <button key={t.id} onClick={() => onEditTx(t)} className="w-full flex items-center gap-3 px-4 min-h-15 py-3 text-left active:bg-surface-2">
-                        <span className={`size-10 rounded-xl grid place-items-center shrink-0 ${t.type === 'income' ? 'bg-save/15 text-save' : 'bg-spend/15 text-spend'}`}>
-                          {t.type === 'income' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
-                        </span>
-                        <span className="flex-1 min-w-0 font-medium truncate">{t.note || (t.type === 'income' ? 'Einzahlung' : 'Auszahlung')}</span>
-                        <span className={`tabular font-semibold ${t.type === 'income' ? 'text-save' : 'text-white'}`}>
-                          {t.type === 'income' ? '+' : '−'}{money(t.amount)}
-                        </span>
-                      </button>
-                    ))}
-                  </Card>
-                </div>
-              ))}
-              {txs.length > 8 && (
-                <Button variant="ghost" className="w-full text-sm" onClick={() => setShowAll((s) => !s)}>
-                  {showAll ? 'Weniger anzeigen' : `Alle ${txs.length} anzeigen`}
-                </Button>
-              )}
+              <TxList txs={txs.slice(0, 5)} onEdit={onEditTx} hidden={hidden} />
+              {txs.length > 5 && <Button variant="ghost" className="w-full text-sm" onClick={() => setDetail(true)}>Alle {txs.length} Buchungen ansehen</Button>}
             </>
           )}
         </>
       )}
 
+      {detail && selected && (
+        <CardDetail account={selected} hidden={hidden} onClose={() => setDetail(false)} onBook={onBook} onEditTx={onEditTx} onEditAccount={() => setEdit(selected)} />
+      )}
       {edit && <AccountSheet account={edit === 'new' ? null : edit} onClose={() => setEdit(null)} onCreated={onSelect} toast={toast} />}
     </div>
   )

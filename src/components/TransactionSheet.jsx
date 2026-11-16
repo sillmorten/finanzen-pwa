@@ -3,6 +3,9 @@ import { Sheet, AmountInput, Segmented, Field, inputCls, Button, ConfirmButton }
 import { parseAmount, todayISO, fmtNum } from '../lib/format'
 import { useStore } from '../lib/store'
 import { cardTheme } from '../lib/categories'
+import { limitUsage } from '../lib/finance'
+import { fmtEUR0, monthKey } from '../lib/format'
+import { vibrate } from '../lib/confetti'
 
 /** Ein-/Auszahlung auf einem Konto erfassen oder bearbeiten */
 export default function TransactionSheet({ open, onClose, editTx, defaults, onSaved }) {
@@ -26,6 +29,24 @@ function Inner({ onClose, editTx, defaults, onSaved }) {
     const tx = { accountId, type, amount: Math.round(value * 100) / 100, note: note.trim(), date }
     if (editTx) dispatch({ type: 'tx/update', tx: { ...tx, id: editTx.id } })
     else dispatch({ type: 'tx/add', tx })
+    // Limit-Warnung
+    const acc = state.accounts.find((a) => a.id === accountId)
+    const k = monthKey(date)
+    if (type === 'expense' && acc?.limit && k === monthKey()) {
+      const before = limitUsage(state, acc, k).spent - (editTx && editTx.accountId === accountId && editTx.type === 'expense' && monthKey(editTx.date) === k ? editTx.amount : 0)
+      const after = before + tx.amount
+      if (after > acc.limit) {
+        vibrate([40, 60, 40])
+        onSaved?.(`⚠️ Limit von ${fmtEUR0(acc.limit)} überschritten (${fmtEUR0(after)})`)
+        onClose()
+        return
+      }
+      if (after >= acc.limit * 0.8) {
+        onSaved?.(`Achtung: noch ${fmtEUR0(acc.limit - after)} bis zum Limit`)
+        onClose()
+        return
+      }
+    }
     onSaved?.(editTx ? 'Buchung aktualisiert' : type === 'expense' ? 'Auszahlung gespeichert' : 'Einzahlung gespeichert')
     onClose()
   }

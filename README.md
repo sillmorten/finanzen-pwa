@@ -11,7 +11,7 @@ Dunkles Design, große Buttons für die Einhand-Bedienung, installierbar auf dem
 
 | Bereich | Inhalt |
 |---|---|
-| **Konten** | Deine Konten als wischbare Bankkarten mit eigenem Namen, Kontoart, Kartendesign und optional den letzten 4 Ziffern. Ein- und Auszahlungen pro Konto, Kontostand jederzeit korrigierbar, Gesamtvermögen oben, Beträge per 👁 ausblendbar |
+| **Konten** | Deine Konten als wischbare Bankkarten mit eigenem Namen, Kontoart, Kartendesign und optional den letzten 4 Ziffern. Karte antippen öffnet alle Buchungen der Karte (Monatsfilter, Eingänge/Ausgänge). Optionales monatliches Ausgabenlimit pro Karte mit Warnung. Ein- und Auszahlungen pro Konto, Kontostand jederzeit korrigierbar, Gesamtvermögen oben, Beträge per 👁 ausblendbar |
 | **Sparen** | Spartöpfe mit Zielbetrag & Deadline (inkl. „x € / Monat bis …“), Schnell-Buttons +10 / +25 / +50 / +100 € |
 | **Spaß am Sparen** | Spar-Level (🌱 bis 👑), wöchentliche Spar-Serie 🔥, Abzeichen für Meilensteine, Konfetti bei Einzahlungen, Level-Ups und erreichten Zielen |
 | **Krypto** | Manuelle Erfassung von BTC, XRP & Co.; optional Kursabruf über CoinGecko ohne API-Key |
