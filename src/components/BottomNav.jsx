@@ -1,7 +1,8 @@
-import { CreditCard, PiggyBank, ChartLine, Plus } from 'lucide-react'
+import { CreditCard, PiggyBank, ChartLine, ChartColumn, Plus } from 'lucide-react'
 
 const TABS = [
   { id: 'accounts', label: 'Konten', icon: CreditCard },
+  { id: 'stats', label: 'Statistik', icon: ChartColumn },
   null,
   { id: 'savings', label: 'Sparen', icon: PiggyBank },
   { id: 'depot', label: 'Depot', icon: ChartLine },
@@ -10,7 +11,7 @@ const TABS = [
 export default function BottomNav({ tab, onTab, onAdd }) {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-bg/90 backdrop-blur border-t border-line/60 pb-safe">
-      <div className="mx-auto max-w-lg grid grid-cols-4 items-end px-2 pt-1.5">
+      <div className="mx-auto max-w-lg grid grid-cols-5 items-end px-1 pt-1.5">
         {TABS.map((t) =>
           t === null ? (
             <div key="fab" className="flex justify-center">
@@ -26,7 +27,7 @@ export default function BottomNav({ tab, onTab, onAdd }) {
             <button
               key={t.id}
               onClick={() => onTab(t.id)}
-              className={`flex flex-col items-center gap-1 min-h-14 justify-center text-[11px] font-medium ${tab === t.id ? 'text-save' : 'text-muted'}`}
+              className={`flex flex-col items-center gap-1 min-h-14 justify-center text-[11px] w-full font-medium ${tab === t.id ? 'text-save' : 'text-muted'}`}
               aria-current={tab === t.id ? 'page' : undefined}
             >
               <t.icon size={24} strokeWidth={tab === t.id ? 2.4 : 1.8} />

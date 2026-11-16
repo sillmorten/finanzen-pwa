@@ -7,12 +7,13 @@ import { useStore } from './lib/store'
 import Accounts from './views/Accounts'
 import Savings from './views/Savings'
 import Depot from './views/Depot'
+import Stats from './views/Stats'
 import { usePriceUpdater } from './lib/prices'
 import Settings from './views/Settings'
 import AddLink from './components/AddLink'
 import { LockProvider } from './lib/lock'
 
-const TITLES = { accounts: 'Meine Konten', savings: 'Sparen', depot: 'Depot & Krypto' }
+const TITLES = { accounts: 'Meine Konten', stats: 'Statistik', savings: 'Sparen', depot: 'Depot & Krypto' }
 const getHashTab = () => {
   const h = location.hash.replace('#', '')
   return TITLES[h] ? h : 'accounts'
@@ -67,6 +68,7 @@ export default function App() {
         {tab === 'accounts' && (
           <Accounts selectedId={selected?.id} onSelect={select} onBook={book} onEditTx={(t) => setTx({ editTx: t })} onTab={goTab} toast={toast} detail={detail} setDetail={setDetail} newAccount={newAccount} setNewAccount={setNewAccount} />
         )}
+        {tab === 'stats' && <Stats onEditTx={(t) => setTx({ editTx: t })} />}
         {tab === 'savings' && <Savings toast={toast} />}
         {tab === 'depot' && (
           <Depot toast={toast} prices={prices} onNewAccount={() => { goTab('accounts'); setNewAccount(true) }} onOpenAccount={(id) => { select(id); goTab('accounts'); setDetail(true) }} />
