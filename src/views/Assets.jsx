@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, RefreshCw } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { assetsTotal, potsTotal } from '../lib/finance'
+import { assetsTotal, accountsTotal } from '../lib/finance'
 import { COINGECKO_IDS } from '../lib/categories'
 import { fmtEUR, fmtEUR0, fmtNum, parseAmount } from '../lib/format'
 import { Card, SectionTitle, Sheet, Field, inputCls, Button, ConfirmButton, Empty, Segmented, Progress } from '../components/ui'
@@ -11,8 +11,9 @@ export default function Assets({ toast }) {
   const [edit, setEdit] = useState(null)
   const [loading, setLoading] = useState(false)
   const aTotal = assetsTotal(state)
-  const pTotal = potsTotal(state)
-  const net = aTotal + pTotal
+  const pTotal = accountsTotal(state)
+  const net = aTotal + Math.max(0, pTotal)
+  const netShown = aTotal + pTotal
   const cryptoWithId = state.assets.filter((a) => a.kind === 'crypto' && COINGECKO_IDS[a.symbol])
 
   async function refreshPrices() {
@@ -40,10 +41,10 @@ export default function Assets({ toast }) {
     <div>
       <Card className="bg-gradient-to-br from-income/10 via-surface to-surface border-income/20">
         <div className="text-sm text-muted">Gesamtvermögen</div>
-        <div className="text-4xl font-bold mt-1 tabular">{fmtEUR(net)}</div>
+        <div className="text-4xl font-bold mt-1 tabular">{fmtEUR(netShown)}</div>
         <div className="grid grid-cols-2 gap-3 mt-4 text-sm">
           <div>
-            <div className="text-muted text-xs">Spartöpfe</div>
+            <div className="text-muted text-xs">Konten</div>
             <div className="font-semibold text-save tabular">{fmtEUR0(pTotal)}</div>
           </div>
           <div>

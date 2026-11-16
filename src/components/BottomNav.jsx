@@ -1,17 +1,16 @@
-import { LayoutDashboard, PiggyBank, ReceiptText, Wallet, Plus } from 'lucide-react'
+import { CreditCard, PiggyBank, Bitcoin, Plus } from 'lucide-react'
 
 const TABS = [
-  { id: 'dashboard', label: 'Übersicht', icon: LayoutDashboard },
-  { id: 'savings', label: 'Sparen', icon: PiggyBank },
+  { id: 'accounts', label: 'Konten', icon: CreditCard },
   null,
-  { id: 'transactions', label: 'Buchungen', icon: ReceiptText },
-  { id: 'assets', label: 'Vermögen', icon: Wallet },
+  { id: 'savings', label: 'Sparen', icon: PiggyBank },
+  { id: 'assets', label: 'Krypto', icon: Bitcoin },
 ]
 
 export default function BottomNav({ tab, onTab, onAdd }) {
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-bg/90 backdrop-blur border-t border-line/60 pb-safe">
-      <div className="mx-auto max-w-lg grid grid-cols-5 items-end px-2 pt-1.5">
+      <div className="mx-auto max-w-lg grid grid-cols-4 items-end px-2 pt-1.5">
         {TABS.map((t) =>
           t === null ? (
             <div key="fab" className="flex justify-center">

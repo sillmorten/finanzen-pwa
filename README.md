@@ -11,11 +11,11 @@ Dunkles Design, große Buttons für die Einhand-Bedienung, installierbar auf dem
 
 | Bereich | Inhalt |
 |---|---|
-| **Übersicht** | Verfügbare Sparrate des Monats, Sparquote, Einnahmen / Fixkosten / variable Ausgaben, Sparziel-Fortschritt, Ausgaben-Donut nach Kategorie, 6-Monats-Verlauf, Gesamtvermögen |
-| **Sparen** | Spartöpfe mit Zielbetrag & Deadline (inkl. „x € / Monat bis …“), Schnell-Buttons +10 / +25 / +50 / +100 €, Ein- und Auszahlungen mit Verlauf und Rückgängig |
-| **Buchungen** | Schnelleingabe über den grünen +-Button, Kategorien (Lebensmittel, Freizeit, Fixkosten, Abo, Sonstiges), Monatsfilter, Kategoriefilter, Vergleich zum Vormonat |
-| **Vermögen** | Manuelle Erfassung von Krypto (BTC, XRP, …) und sonstigen Werten; optional Kursabruf über CoinGecko ohne API-Key |
-| **Einstellungen** (Zahnrad) | Monatliche Einnahmen (Gehalt) & Fixkosten (Miete, Abos …), JSON-Export / -Import, alles löschen |
+| **Konten** | Deine Konten als wischbare Bankkarten mit eigenem Namen, Kontoart, Kartendesign und optional den letzten 4 Ziffern. Ein- und Auszahlungen pro Konto, Kontostand jederzeit korrigierbar, Gesamtvermögen oben, Beträge per 👁 ausblendbar |
+| **Sparen** | Spartöpfe mit Zielbetrag & Deadline (inkl. „x € / Monat bis …“), Schnell-Buttons +10 / +25 / +50 / +100 € |
+| **Spaß am Sparen** | Spar-Level (🌱 bis 👑), wöchentliche Spar-Serie 🔥, Abzeichen für Meilensteine, Konfetti bei Einzahlungen, Level-Ups und erreichten Zielen |
+| **Krypto** | Manuelle Erfassung von BTC, XRP & Co.; optional Kursabruf über CoinGecko ohne API-Key |
+| **Backup** | JSON-Export / -Import, alles löschen |
 
 ## Auf dem Handy installieren
 
@@ -23,7 +23,7 @@ Dunkles Design, große Buttons für die Einhand-Bedienung, installierbar auf dem
 2. Menü (⋮) → **„App installieren“** bzw. „Zum Startbildschirm hinzufügen“.
 3. Die App startet danach im Vollbild und funktioniert auch offline.
 
-> **Backup:** Da die Daten nur im Browser liegen, regelmäßig unter *Einstellungen → Als JSON exportieren* sichern. Beim Löschen der Browserdaten oder Deinstallieren der App gehen sie sonst verloren.
+> **Backup:** Da die Daten nur im Browser liegen, regelmäßig unter *Backup → Als JSON exportieren* sichern. Beim Löschen der Browserdaten oder Deinstallieren der App gehen sie sonst verloren.
 
 ## Entwicklung
 
@@ -38,7 +38,7 @@ npm run preview  # Build lokal ansehen
 
 - [React 19](https://react.dev) + [Vite](https://vite.dev)
 - [Tailwind CSS 4](https://tailwindcss.com)
-- [Recharts](https://recharts.org) für Diagramme, [Lucide](https://lucide.dev) für Icons
+- [Lucide](https://lucide.dev) für Icons
 - [vite-plugin-pwa](https://vite-pwa-org.netlify.app) (Manifest + Service Worker, offlinefähig)
 - Speicherung: `localStorage` (Schlüssel `finanzen-pwa:v1`)
 
@@ -48,19 +48,23 @@ npm run preview  # Build lokal ansehen
 src/
   App.jsx                 Layout, Tabs, Header
   components/
+    BankCard.jsx          Bankkarten-Darstellung
+    AccountSheet.jsx      Konto anlegen / bearbeiten / Kontostand korrigieren
+    TransactionSheet.jsx  Ein- / Auszahlung erfassen
+    SaveLevel.jsx         Spar-Level & Serie
     BottomNav.jsx         Untere Navigation mit +-Button
-    TransactionSheet.jsx  Schnelleingabe / Bearbeiten von Buchungen
-    ui.jsx                Basis-Komponenten (Card, Sheet, Button, Progress …)
+    ui.jsx                Basis-Komponenten (Card, Sheet, Button …)
   views/
-    Dashboard.jsx         Übersicht
-    Savings.jsx           Spartöpfe
-    Transactions.jsx      Buchungen & Monatsvergleich
-    Assets.jsx            Krypto & Vermögen
-    Settings.jsx          Fixposten, Export / Import
+    Accounts.jsx          Konten mit Karten-Karussell
+    Savings.jsx           Spartöpfe & Abzeichen
+    Assets.jsx            Krypto & sonstige Werte
+    Settings.jsx          Backup: Export / Import
   lib/
-    store.jsx             Zustand, Persistenz, Import-Validierung, Export
-    finance.js            Berechnungen (Monatswerte, Salden)
-    categories.js         Kategorien, Farben, Coin-IDs
+    store.jsx             Zustand, Persistenz, Import-Validierung, Migration
+    finance.js            Kontostände & Summen
+    gamify.js             Level, Serien, Abzeichen
+    confetti.js           Konfetti-Effekt
+    categories.js         Kontoarten, Kartendesigns, Coin-IDs
     format.js             Euro-/Datumsformatierung, Betragseingabe
 .github/workflows/deploy.yml   Automatisches Deployment auf GitHub Pages
 ```

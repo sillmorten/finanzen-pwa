@@ -2,14 +2,14 @@ import { createContext, useContext, useEffect, useReducer } from 'react'
 import { uid, todayISO } from './format'
 
 const STORAGE_KEY = 'finanzen-pwa:v1'
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export const emptyState = () => ({
   version: SCHEMA_VERSION,
-  /** Einzelbuchungen: { id, type: 'income'|'expense', amount, category, note, date } */
+  /** Konten / Karten: { id, name, type, theme, last4, initialBalance } */
+  accounts: [],
+  /** Buchungen: { id, accountId, type: 'income'|'expense', amount, note, date } */
   transactions: [],
-  /** Monatlich wiederkehrende Posten: { id, type, name, amount, category } */
-  recurring: [],
   /** Spartöpfe: { id, name, emoji, color, target, deadline, history: [{ id, amount, date, note }] } */
   pots: [],
   /** Vermögenswerte: { id, name, symbol, kind: 'crypto'|'other', amount, price, updatedAt } */
@@ -32,14 +32,19 @@ export function normalize(data) {
   const base = emptyState()
   const arr = (v) => (Array.isArray(v) ? v : [])
   const n = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0)
-  return {
+  const out = {
     ...base,
+    accounts: arr(data.accounts).map((a) => ({
+      id: a.id || uid(),
+      name: a.name || 'Konto',
+      type: a.type || 'giro',
+      theme: a.theme || 'emerald',
+      last4: String(a.last4 || '').replace(/\D/g, '').slice(-4),
+      initialBalance: n(a.initialBalance),
+    })),
     transactions: arr(data.transactions)
       .filter((t) => t && (t.type === 'income' || t.type === 'expense'))
-      .map((t) => ({ id: t.id || uid(), type: t.type, amount: Math.abs(n(t.amount)), category: t.category || 'sonstiges', note: t.note || '', date: t.date || todayISO() })),
-    recurring: arr(data.recurring)
-      .filter((r) => r && (r.type === 'income' || r.type === 'expense'))
-      .map((r) => ({ id: r.id || uid(), type: r.type, name: r.name || '', amount: Math.abs(n(r.amount)), category: r.category || (r.type === 'income' ? 'gehalt' : 'fixkosten') })),
+      .map((t) => ({ id: t.id || uid(), accountId: t.accountId || null, type: t.type, amount: Math.abs(n(t.amount)), note: t.note || '', date: t.date || todayISO() })),
     pots: arr(data.pots).map((p) => ({
       id: p.id || uid(),
       name: p.name || 'Spartopf',
@@ -59,6 +64,17 @@ export function normalize(data) {
       updatedAt: a.updatedAt || null,
     })),
   }
+  // Migration v1 -> v2: Buchungen ohne Konto einem Hauptkonto zuordnen
+  const orphans = out.transactions.filter((t) => !t.accountId || !out.accounts.some((a) => a.id === t.accountId))
+  if (orphans.length) {
+    let main = out.accounts[0]
+    if (!main) {
+      main = { id: uid(), name: 'Hauptkonto', type: 'giro', theme: 'emerald', last4: '', initialBalance: 0 }
+      out.accounts.push(main)
+    }
+    out.transactions = out.transactions.map((t) => (orphans.includes(t) ? { ...t, accountId: main.id } : t))
+  }
+  return out
 }
 
 function reducer(state, action) {
@@ -70,12 +86,16 @@ function reducer(state, action) {
     case 'tx/delete':
       return { ...state, transactions: state.transactions.filter((t) => t.id !== action.id) }
 
-    case 'rec/add':
-      return { ...state, recurring: [...state.recurring, { id: uid(), ...action.item }] }
-    case 'rec/update':
-      return { ...state, recurring: state.recurring.map((r) => (r.id === action.item.id ? { ...r, ...action.item } : r)) }
-    case 'rec/delete':
-      return { ...state, recurring: state.recurring.filter((r) => r.id !== action.id) }
+    case 'acc/add':
+      return { ...state, accounts: [...state.accounts, { id: action.id || uid(), ...action.account }] }
+    case 'acc/update':
+      return { ...state, accounts: state.accounts.map((a) => (a.id === action.account.id ? { ...a, ...action.account } : a)) }
+    case 'acc/delete':
+      return {
+        ...state,
+        accounts: state.accounts.filter((a) => a.id !== action.id),
+        transactions: state.transactions.filter((t) => t.accountId !== action.id),
+      }
 
     case 'pot/add':
       return { ...state, pots: [...state.pots, { id: uid(), history: [], ...action.pot }] }

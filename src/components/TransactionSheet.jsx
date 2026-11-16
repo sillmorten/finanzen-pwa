@@ -1,73 +1,73 @@
 import { useState } from 'react'
 import { Sheet, AmountInput, Segmented, Field, inputCls, Button, ConfirmButton } from './ui'
-import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from '../lib/categories'
 import { parseAmount, todayISO, fmtNum } from '../lib/format'
 import { useStore } from '../lib/store'
+import { cardTheme } from '../lib/categories'
 
-/** Schnelleingabe & Bearbeiten einer Buchung */
-export default function TransactionSheet({ open, onClose, editTx, onSaved }) {
+/** Ein-/Auszahlung auf einem Konto erfassen oder bearbeiten */
+export default function TransactionSheet({ open, onClose, editTx, defaults, onSaved }) {
   if (!open) return null
-  return <Inner key={editTx?.id || 'new'} onClose={onClose} editTx={editTx} onSaved={onSaved} />
+  return <Inner key={editTx?.id || 'new'} onClose={onClose} editTx={editTx} defaults={defaults} onSaved={onSaved} />
 }
 
-function Inner({ onClose, editTx, onSaved }) {
-  const { dispatch } = useStore()
-  const [type, setType] = useState(editTx?.type || 'expense')
+function Inner({ onClose, editTx, defaults, onSaved }) {
+  const { state, dispatch } = useStore()
+  const [type, setType] = useState(editTx?.type || defaults?.type || 'expense')
+  const [accountId, setAccountId] = useState(editTx?.accountId || defaults?.accountId || state.accounts[0]?.id)
   const [amount, setAmount] = useState(editTx ? fmtNum(editTx.amount) : '')
-  const [category, setCategory] = useState(editTx?.category || 'lebensmittel')
   const [note, setNote] = useState(editTx?.note || '')
   const [date, setDate] = useState(editTx?.date || todayISO())
 
-  const cats = type === 'expense' ? EXPENSE_CATEGORIES : INCOME_CATEGORIES
   const value = parseAmount(amount)
-  const valid = Number.isFinite(value) && value > 0
-
-  const switchType = (t) => {
-    setType(t)
-    setCategory(t === 'expense' ? 'lebensmittel' : 'gehalt')
-  }
+  const valid = Number.isFinite(value) && value > 0 && accountId
 
   const save = () => {
     if (!valid) return
-    const tx = { type, amount: Math.round(value * 100) / 100, category, note: note.trim(), date }
+    const tx = { accountId, type, amount: Math.round(value * 100) / 100, note: note.trim(), date }
     if (editTx) dispatch({ type: 'tx/update', tx: { ...tx, id: editTx.id } })
     else dispatch({ type: 'tx/add', tx })
-    onSaved?.(editTx ? 'Buchung aktualisiert' : type === 'expense' ? 'Ausgabe gespeichert' : 'Einnahme gespeichert')
+    onSaved?.(editTx ? 'Buchung aktualisiert' : type === 'expense' ? 'Auszahlung gespeichert' : 'Einzahlung gespeichert')
     onClose()
+  }
+
+  if (!state.accounts.length) {
+    return (
+      <Sheet open onClose={onClose} title="Erst ein Konto anlegen">
+        <p className="text-muted">Lege zuerst eine Karte bzw. ein Konto an. Danach kannst du Ein- und Auszahlungen darauf buchen.</p>
+        <Button className="w-full mt-6" onClick={onClose}>Okay</Button>
+      </Sheet>
+    )
   }
 
   return (
     <Sheet open onClose={onClose} title={editTx ? 'Buchung bearbeiten' : 'Neue Buchung'}>
       <Segmented
         value={type}
-        onChange={switchType}
+        onChange={setType}
         options={[
-          { value: 'expense', label: 'Ausgabe', activeCls: 'bg-spend/20 text-spend' },
-          { value: 'income', label: 'Einnahme', activeCls: 'bg-save/20 text-save' },
+          { value: 'income', label: 'Einzahlung', activeCls: 'bg-save/20 text-save' },
+          { value: 'expense', label: 'Auszahlung', activeCls: 'bg-spend/20 text-spend' },
         ]}
       />
       <div className="mt-4">
         <AmountInput value={amount} onChange={setAmount} autoFocus={!editTx} color={type === 'expense' ? 'text-spend' : 'text-save'} onKeyDown={(e) => e.key === 'Enter' && save()} />
       </div>
 
-      <div className="grid grid-cols-3 gap-2 mt-4">
-        {cats.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => setCategory(c.id)}
-            className={`min-h-16 rounded-2xl border text-sm flex flex-col items-center justify-center gap-0.5 transition-colors ${
-              category === c.id ? 'border-white/70 bg-surface-2' : 'border-line text-muted'
-            }`}
-          >
-            <span className="text-xl">{c.emoji}</span>
-            {c.label}
-          </button>
-        ))}
-      </div>
+      {state.accounts.length > 1 && (
+        <Field label="Konto">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 pb-1">
+            {state.accounts.map((a) => (
+              <button key={a.id} type="button" onClick={() => setAccountId(a.id)} className={`shrink-0 flex items-center gap-2 rounded-2xl border px-3 min-h-12 text-sm ${accountId === a.id ? 'border-white bg-surface-2' : 'border-line text-muted'}`}>
+                <span className="h-5 w-8 rounded-md" style={{ background: cardTheme(a.theme).bg }} />
+                {a.name}
+              </button>
+            ))}
+          </div>
+        </Field>
+      )}
 
       <Field label="Notiz (optional)">
-        <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder="z. B. Rewe, Kino, Netflix" maxLength={80} />
+        <input className={inputCls} value={note} onChange={(e) => setNote(e.target.value)} placeholder={type === 'income' ? 'z. B. Gehalt' : 'z. B. Überweisung'} maxLength={60} />
       </Field>
       <Field label="Datum">
         <input type="date" className={inputCls} value={date} onChange={(e) => setDate(e.target.value || todayISO())} />
@@ -75,18 +75,9 @@ function Inner({ onClose, editTx, onSaved }) {
 
       <div className="flex gap-2 mt-6">
         {editTx && (
-          <ConfirmButton
-            className="flex-1"
-            onConfirm={() => {
-              dispatch({ type: 'tx/delete', id: editTx.id })
-              onSaved?.('Buchung gelöscht')
-              onClose()
-            }}
-          />
+          <ConfirmButton className="flex-1" onConfirm={() => { dispatch({ type: 'tx/delete', id: editTx.id }); onSaved?.('Buchung gelöscht'); onClose() }} />
         )}
-        <Button className="flex-[2]" onClick={save} disabled={!valid}>
-          Speichern
-        </Button>
+        <Button className="flex-[2]" onClick={save} disabled={!valid}>Speichern</Button>
       </div>
     </Sheet>
   )

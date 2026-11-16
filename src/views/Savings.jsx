@@ -4,7 +4,29 @@ import { useStore } from '../lib/store'
 import { potBalance, potsTotal } from '../lib/finance'
 import { fmtEUR, fmtEUR0, parseAmount, monthsUntil, fmtNum } from '../lib/format'
 import { POT_PRESETS, POT_COLORS } from '../lib/categories'
-import { Card, Progress, Sheet, Field, inputCls, Button, AmountInput, ConfirmButton, Empty, Segmented } from '../components/ui'
+import { Card, Progress, Sheet, Field, inputCls, Button, AmountInput, ConfirmButton, Empty, Segmented, SectionTitle } from '../components/ui'
+import SaveLevel from '../components/SaveLevel'
+import { levelFor, badges, randomCheer } from '../lib/gamify'
+import { confetti, vibrate } from '../lib/confetti'
+
+/** Feiert Einzahlungen: Konfetti, Level-Up & Ziel erreicht */
+export function celebrateDeposit(state, pot, amount, toast) {
+  const total = potsTotal(state)
+  const before = levelFor(total)
+  const after = levelFor(total + amount)
+  const bal = potBalance(pot)
+  vibrate(20)
+  if (pot.target > 0 && bal < pot.target && bal + amount >= pot.target) {
+    confetti({ count: 220, duration: 2600 })
+    toast(`🏁 Ziel „${pot.name}“ erreicht! Mega!`)
+  } else if (after.index > before.index) {
+    confetti({ count: 200, duration: 2400 })
+    toast(`${after.emoji} Level ${after.level}: ${after.name}!`)
+  } else {
+    confetti({ count: 70, duration: 1400 })
+    toast(`+${fmtEUR0(amount)} · ${randomCheer()}`)
+  }
+}
 
 const QUICK = [10, 25, 50, 100]
 
@@ -17,16 +39,13 @@ export default function Savings({ toast }) {
 
   return (
     <div>
-      <Card className="bg-gradient-to-br from-save/15 via-surface to-surface border-save/20">
-        <div className="text-sm text-muted">Gespart in allen Töpfen</div>
-        <div className="text-4xl font-bold text-save mt-1 tabular">{fmtEUR(total)}</div>
-        {totalTarget > 0 && (
-          <>
-            <div className="text-sm text-muted mt-1">von {fmtEUR0(totalTarget)} Gesamtziel</div>
-            <Progress value={(total / totalTarget) * 100} className="h-3 mt-3" />
-          </>
-        )}
-      </Card>
+      <SaveLevel />
+      {totalTarget > 0 && (
+        <div className="flex justify-between text-xs text-muted mt-3 px-1">
+          <span>In allen Töpfen: <span className="text-white font-semibold">{fmtEUR(total)}</span></span>
+          <span>Gesamtziel {fmtEUR0(totalTarget)}</span>
+        </div>
+      )}
 
       {state.pots.length === 0 && (
         <Card className="mt-4">
@@ -37,8 +56,8 @@ export default function Savings({ toast }) {
       <div className="space-y-3 mt-4">
         {state.pots.map((p) => (
           <PotCard key={p.id} pot={p} onEdit={() => setEdit(p)} onMove={(dir) => setMove({ pot: p, dir })} onQuick={(amt) => {
+            celebrateDeposit(state, p, amt, toast)
             dispatch({ type: 'pot/move', id: p.id, amount: amt })
-            toast(`${fmtEUR0(amt)} in „${p.name}“ gespart`)
           }} />
         ))}
       </div>
@@ -46,6 +65,17 @@ export default function Savings({ toast }) {
       <Button variant="outline" className="w-full mt-4 flex items-center justify-center gap-2" onClick={() => setEdit('new')}>
         <Plus size={20} /> Neuer Spartopf
       </Button>
+
+      <SectionTitle>Abzeichen · {badges(state).filter((b) => b.done).length}/{badges(state).length}</SectionTitle>
+      <div className="grid grid-cols-3 gap-2">
+        {badges(state).map((b) => (
+          <div key={b.id} className={`rounded-2xl border p-3 text-center ${b.done ? 'bg-save/10 border-save/30' : 'bg-surface border-line/60 opacity-45'}`}>
+            <div className={`text-3xl ${b.done ? '' : 'grayscale'}`}>{b.done ? b.emoji : '🔒'}</div>
+            <div className="text-xs font-semibold mt-1 leading-tight">{b.name}</div>
+            <div className="text-[10px] text-muted mt-0.5 leading-tight">{b.desc}</div>
+          </div>
+        ))}
+      </div>
 
       {edit && <PotSheet pot={edit === 'new' ? null : edit} onClose={() => setEdit(null)} toast={toast} />}
       {move && <MoveSheet {...move} onClose={() => setMove(null)} toast={toast} />}
@@ -118,8 +148,9 @@ function MoveSheet({ pot, dir: initialDir, onClose, toast }) {
   const save = () => {
     if (!valid) return
     const amt = Math.round(v * 100) / 100
+    if (dir === 'in') celebrateDeposit(state, live, amt, toast)
+    else toast(`${fmtEUR(amt)} ausgezahlt`)
     dispatch({ type: 'pot/move', id: pot.id, amount: dir === 'in' ? amt : -amt, note: note.trim() })
-    toast(dir === 'in' ? `${fmtEUR(amt)} eingezahlt` : `${fmtEUR(amt)} ausgezahlt`)
     onClose()
   }
 

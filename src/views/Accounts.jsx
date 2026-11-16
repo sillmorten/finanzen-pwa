@@ -1,0 +1,188 @@
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDownLeft, ArrowUpRight, Pencil, Eye, EyeOff } from 'lucide-react'
+import { useStore } from '../lib/store'
+import { accountBalance, accountsTotal, assetsTotal, monthFlow, netWorth, potsTotal } from '../lib/finance'
+import { fmtEUR, fmtEUR0, monthKey, monthLabel, dateLabel } from '../lib/format'
+import { Card, SectionTitle, Button } from '../components/ui'
+import BankCard, { AddCard } from '../components/BankCard'
+import AccountSheet from '../components/AccountSheet'
+import SaveLevel from '../components/SaveLevel'
+
+export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab, toast }) {
+  const { state } = useStore()
+  const [edit, setEdit] = useState(null) // account | 'new'
+  const [hidden, setHidden] = useState(() => { try { return localStorage.getItem('finanzen-pwa:hide') === '1' } catch { return false } })
+  const [showAll, setShowAll] = useState(false)
+  const scroller = useRef(null)
+
+  const accounts = state.accounts
+  const selected = accounts.find((a) => a.id === selectedId) || accounts[0]
+  const key = monthKey()
+  const flow = selected ? monthFlow(state, selected.id, key) : null
+
+  const toggleHidden = () => {
+    setHidden((h) => { try { localStorage.setItem('finanzen-pwa:hide', h ? '0' : '1') } catch {} return !h })
+  }
+
+  // Auswahl beim Wischen erkennen (Karte, die der Mitte am nächsten ist)
+  const nearestIndex = () => {
+    const el = scroller.current
+    if (!el) return 0
+    const mid = el.scrollLeft + el.clientWidth / 2
+    let best = 0, dist = Infinity
+    ;[...el.children].forEach((c, i) => {
+      const d = Math.abs(c.offsetLeft + c.offsetWidth / 2 - mid)
+      if (d < dist) { dist = d; best = i }
+    })
+    return best
+  }
+  const onScroll = () => {
+    const idx = nearestIndex()
+    const acc = accounts[idx]
+    if (acc && acc.id !== selected?.id) onSelect(acc.id)
+  }
+  // Ausgewählte Karte in die Mitte scrollen (z. B. nach Neuanlage)
+  useEffect(() => {
+    const el = scroller.current
+    if (!el || !selected) return
+    const idx = accounts.findIndex((a) => a.id === selected.id)
+    const c = el.children[idx]
+    if (!c) return
+    const left = c.offsetLeft - (el.clientWidth - c.offsetWidth) / 2
+    if (Math.abs(el.scrollLeft - left) > 4) el.scrollTo({ left, behavior: 'smooth' })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id, accounts.length])
+
+  const txs = useMemo(() => {
+    if (!selected) return []
+    return state.transactions.filter((t) => t.accountId === selected.id).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+  }, [state.transactions, selected])
+  const visible = showAll ? txs : txs.slice(0, 8)
+  const groups = []
+  for (const t of visible) {
+    const g = groups[groups.length - 1]
+    if (g && g.date === t.date) g.items.push(t)
+    else groups.push({ date: t.date, items: [t] })
+  }
+
+  const money = (v, f = fmtEUR) => (hidden ? '•••••' : f(v))
+
+  return (
+    <div>
+      {/* Gesamtvermögen */}
+      <div className="flex items-end justify-between px-1">
+        <div>
+          <div className="text-sm text-muted">Gesamtvermögen</div>
+          <div className="text-[34px] leading-tight font-bold tabular">{money(netWorth(state))}</div>
+        </div>
+        <button onClick={toggleHidden} className="size-11 grid place-items-center rounded-full bg-surface text-muted mb-1" aria-label={hidden ? 'Beträge zeigen' : 'Beträge verbergen'}>
+          {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
+        </button>
+      </div>
+      <div className="text-xs text-muted px-1 mt-0.5">
+        Konten {money(accountsTotal(state), fmtEUR0)}{state.assets.length > 0 && <> · Krypto & Assets {money(assetsTotal(state), fmtEUR0)}</>}
+      </div>
+
+      {/* Karten-Karussell */}
+      <div
+        ref={scroller}
+        onScroll={onScroll}
+        className="relative flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-[8%] mt-4 pb-3 pt-1"
+      >
+        {accounts.map((a) => (
+          <div key={a.id} className={`snap-center shrink-0 w-[84%] transition-transform duration-300 ${a.id === selected?.id ? 'scale-100' : 'scale-[0.94] opacity-70'}`}>
+            <BankCard account={a} balance={accountBalance(state, a)} hidden={hidden} onClick={() => onSelect(a.id)} />
+          </div>
+        ))}
+        <div className="snap-center shrink-0 w-[84%]">
+          <AddCard onClick={() => setEdit('new')} />
+        </div>
+      </div>
+
+      {/* Punkte-Indikator */}
+      {accounts.length > 1 && (
+        <div className="flex justify-center gap-1.5 mt-1">
+          {accounts.map((a) => (
+            <span key={a.id} className={`h-1.5 rounded-full transition-all ${a.id === selected?.id ? 'w-5 bg-white' : 'w-1.5 bg-line'}`} />
+          ))}
+        </div>
+      )}
+
+      {!selected ? (
+        <p className="text-sm text-muted text-center mt-3 px-6">Tippe auf die Karte oben, gib deinem Konto einen Namen, wähle ein Design und trag den aktuellen Kontostand ein.</p>
+      ) : (
+        <>
+          {/* Aktionen */}
+          <div className="grid grid-cols-3 gap-2 mt-4">
+            <Action icon={<ArrowDownLeft size={22} />} label="Einzahlung" cls="text-save" onClick={() => onBook('income')} />
+            <Action icon={<ArrowUpRight size={22} />} label="Auszahlung" cls="text-spend" onClick={() => onBook('expense')} />
+            <Action icon={<Pencil size={20} />} label="Bearbeiten" cls="text-white/85" onClick={() => setEdit(selected)} />
+          </div>
+
+          {/* Monat */}
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <Card className="!p-3">
+              <div className="text-xs text-muted">Eingänge {monthLabel(key, true)}</div>
+              <div className="text-lg font-semibold text-save tabular">+{money(flow.income, fmtEUR0)}</div>
+            </Card>
+            <Card className="!p-3">
+              <div className="text-xs text-muted">Ausgänge {monthLabel(key, true)}</div>
+              <div className="text-lg font-semibold text-spend tabular">−{money(flow.expense, fmtEUR0)}</div>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* Spar-Level */}
+      <SectionTitle action={<button onClick={() => onTab('savings')} className="text-sm text-save min-h-9 px-1">Sparziele →</button>}>Dein Spar-Level</SectionTitle>
+      <SaveLevel compact onClick={() => onTab('savings')} />
+
+      {/* Bewegungen */}
+      {selected && (
+        <>
+          <SectionTitle>Bewegungen · {selected.name}</SectionTitle>
+          {txs.length === 0 ? (
+            <Card><p className="text-sm text-muted text-center py-4">Noch keine Bewegungen. Tippe auf Einzahlung oder Auszahlung.</p></Card>
+          ) : (
+            <>
+              {groups.map((g) => (
+                <div key={g.date} className="mb-3">
+                  <div className="text-xs text-muted px-1 mb-1.5">{dateLabel(g.date)}</div>
+                  <Card className="!p-0 divide-y divide-line/60 overflow-hidden">
+                    {g.items.map((t) => (
+                      <button key={t.id} onClick={() => onEditTx(t)} className="w-full flex items-center gap-3 px-4 min-h-15 py-3 text-left active:bg-surface-2">
+                        <span className={`size-10 rounded-xl grid place-items-center shrink-0 ${t.type === 'income' ? 'bg-save/15 text-save' : 'bg-spend/15 text-spend'}`}>
+                          {t.type === 'income' ? <ArrowDownLeft size={20} /> : <ArrowUpRight size={20} />}
+                        </span>
+                        <span className="flex-1 min-w-0 font-medium truncate">{t.note || (t.type === 'income' ? 'Einzahlung' : 'Auszahlung')}</span>
+                        <span className={`tabular font-semibold ${t.type === 'income' ? 'text-save' : 'text-white'}`}>
+                          {t.type === 'income' ? '+' : '−'}{money(t.amount)}
+                        </span>
+                      </button>
+                    ))}
+                  </Card>
+                </div>
+              ))}
+              {txs.length > 8 && (
+                <Button variant="ghost" className="w-full text-sm" onClick={() => setShowAll((s) => !s)}>
+                  {showAll ? 'Weniger anzeigen' : `Alle ${txs.length} anzeigen`}
+                </Button>
+              )}
+            </>
+          )}
+        </>
+      )}
+
+      {edit && <AccountSheet account={edit === 'new' ? null : edit} onClose={() => setEdit(null)} onCreated={onSelect} toast={toast} />}
+    </div>
+  )
+}
+
+function Action({ icon, label, cls, onClick }) {
+  return (
+    <button onClick={onClick} className="min-h-20 rounded-2xl bg-surface border border-line/60 flex flex-col items-center justify-center gap-1.5 active:bg-surface-2">
+      <span className={cls}>{icon}</span>
+      <span className="text-sm font-medium">{label}</span>
+    </button>
+  )
+}
