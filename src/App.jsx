@@ -10,6 +10,7 @@ import Depot from './views/Depot'
 import { usePriceUpdater } from './lib/prices'
 import Settings from './views/Settings'
 import AddLink from './components/AddLink'
+import { LockProvider } from './lib/lock'
 
 const TITLES = { accounts: 'Meine Konten', savings: 'Sparen', depot: 'Depot & Krypto' }
 const getHashTab = () => {
@@ -51,6 +52,7 @@ export default function App() {
   const book = (type) => setTx({ defaults: { type, accountId: selected?.id } })
 
   return (
+    <LockProvider toast={toast}>
     <div className="min-h-dvh pb-32">
       <header className="sticky top-0 z-30 bg-bg/85 backdrop-blur pt-safe">
         <div className="mx-auto max-w-lg flex items-center justify-between px-4 h-16">
@@ -77,5 +79,6 @@ export default function App() {
       <AddLink toast={toast} onDone={() => { setTab('accounts'); setTimeout(() => prices.refresh({ force: true }), 50) }} />
       <Toast message={toastMsg} onDone={clearToast} />
     </div>
+    </LockProvider>
   )
 }

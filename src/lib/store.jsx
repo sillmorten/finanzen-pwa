@@ -45,6 +45,7 @@ export function normalize(data) {
       last4: String(a.last4 || '').replace(/\D/g, '').slice(-4),
       initialBalance: n(a.initialBalance),
       limit: Math.abs(n(a.limit)),
+      locked: !!a.locked,
     })),
     transactions: arr(data.transactions)
       .filter((t) => t && (t.type === 'income' || t.type === 'expense'))
@@ -74,6 +75,7 @@ export function normalize(data) {
       updatedAt: a.updatedAt || null,
     })),
     pricesUpdatedAt: data.pricesUpdatedAt || null,
+    pinHash: typeof data.pinHash === 'string' ? data.pinHash : null,
   }
   // Migration: Positionen ohne Konto einer Krypto-Wallet zuordnen
   const looseAssets = out.assets.filter((a) => !a.accountId || !out.accounts.some((x) => x.id === a.accountId))
@@ -177,6 +179,10 @@ function reducer(state, action) {
     }
     case 'import':
       return normalize(action.data)
+    case 'acc/lock':
+      return { ...state, accounts: state.accounts.map((a) => (a.id === action.id ? { ...a, locked: action.locked } : a)) }
+    case 'pin/set':
+      return { ...state, pinHash: action.hash || null }
     case 'reset':
       return emptyState()
     default:

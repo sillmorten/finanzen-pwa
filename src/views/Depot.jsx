@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { Plus, RefreshCw } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountCash, accountPositions, positionsValue, assetsTotal, accountPerformance } from '../lib/finance'
+import { accountCash, accountPositions, positionsValue, visibleAssetsTotal, accountPerformance } from '../lib/finance'
+import { useLock } from '../lib/lock'
+import { Lock } from 'lucide-react'
 import { isInvest, cardTheme, accountTypeLabel } from '../lib/categories'
 import { fmtEUR, fmtEUR0 } from '../lib/format'
 import { timeAgo } from '../lib/prices'
@@ -13,9 +15,12 @@ export default function Depot({ toast, prices, onNewAccount, onOpenAccount }) {
   const { state } = useStore()
   const [edit, setEdit] = useState(null) // { position?, accountId? }
   const accounts = state.accounts.filter(isInvest)
-  const total = assetsTotal(state)
-  const invested = state.assets.reduce((s, p) => s + (p.buyValue || 0), 0)
-  const withBuy = state.assets.filter((p) => p.buyValue)
+  const { toggleLock } = useLock()
+  const total = visibleAssetsTotal(state)
+  const openIds = new Set(state.accounts.filter((a) => !a.locked).map((a) => a.id))
+  const visible = state.assets.filter((p) => openIds.has(p.accountId))
+  const invested = visible.reduce((s, p) => s + (p.buyValue || 0), 0)
+  const withBuy = visible.filter((p) => p.buyValue)
   const gain = withBuy.reduce((s, p) => s + p.amount * p.price - p.buyValue, 0)
 
   const refresh = async () => {
@@ -56,6 +61,14 @@ export default function Depot({ toast, prices, onNewAccount, onOpenAccount }) {
         const pos = accountPositions(state, acc.id)
         const cash = accountCash(state, acc)
         const perf = accountPerformance(state, acc.id)
+        if (acc.locked) {
+          return (
+            <button key={acc.id} onClick={() => toggleLock(acc)} className="w-full mt-6 rounded-3xl bg-surface border border-line/60 p-4 flex items-center gap-3 text-left active:bg-surface-2">
+              <span className="size-11 rounded-xl bg-surface-2 grid place-items-center text-amber-300"><Lock size={20} /></span>
+              <span className="flex-1"><span className="block font-semibold">{acc.name}</span><span className="block text-xs text-muted">Gesperrt · tippen zum Entsperren</span></span>
+            </button>
+          )
+        }
         return (
           <div key={acc.id}>
             <SectionTitle action={<button onClick={() => setEdit({ accountId: acc.id })} className="flex items-center gap-1 text-sm text-save min-h-9 px-1"><Plus size={16} /> Position</button>}>

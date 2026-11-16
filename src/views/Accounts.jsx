@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Pencil, Eye, EyeOff } from 'lucide-react'
 import { useStore } from '../lib/store'
-import { accountPerformance, accountBalance, assetsTotal, monthFlow, netWorth, limitUsage } from '../lib/finance'
+import { accountPerformance, accountBalance, visibleAssetsTotal, visibleNetWorth, lockedCount, monthFlow, limitUsage } from '../lib/finance'
+import { useLock } from '../lib/lock'
+import { Lock, Unlock } from 'lucide-react'
 import { fmtEUR, fmtEUR0, monthKey, monthLabel } from '../lib/format'
 import TxList, { sortTx } from '../components/TxList'
 import LimitBar from '../components/LimitBar'
@@ -63,7 +65,10 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
   }, [state.transactions, selected])
   const usage = selected ? limitUsage(state, selected, key) : null
 
+  const { toggleLock } = useLock()
+  const locked = !!selected?.locked
   const money = (v, f = fmtEUR) => (hidden ? '•••••' : f(v))
+  const smoney = (v, f = fmtEUR) => (hidden || locked ? '•••••' : f(v))
 
   return (
     <div>
@@ -71,14 +76,15 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       <div className="flex items-end justify-between px-1">
         <div>
           <div className="text-sm text-muted">Gesamtvermögen</div>
-          <div className="text-[34px] leading-tight font-bold tabular">{money(netWorth(state))}</div>
+          <div className="text-[34px] leading-tight font-bold tabular">{money(visibleNetWorth(state))}</div>
         </div>
         <button onClick={toggleHidden} className="size-11 grid place-items-center rounded-full bg-surface text-muted mb-1" aria-label={hidden ? 'Beträge zeigen' : 'Beträge verbergen'}>
           {hidden ? <EyeOff size={20} /> : <Eye size={20} />}
         </button>
       </div>
       <div className="text-xs text-muted px-1 mt-0.5">
-        {state.accounts.length} {state.accounts.length === 1 ? 'Konto' : 'Konten'}{state.assets.length > 0 && <> · davon investiert {money(assetsTotal(state), fmtEUR0)}</>}
+        {state.accounts.length} {state.accounts.length === 1 ? 'Konto' : 'Konten'}{visibleAssetsTotal(state) > 0 && <> · davon investiert {money(visibleAssetsTotal(state), fmtEUR0)}</>}
+        {lockedCount(state) > 0 && <> · 🔒 {lockedCount(state)} gesperrt (nicht eingerechnet)</>}
       </div>
 
       {/* Karten-Karussell */}
@@ -111,10 +117,20 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       ) : (
         <>
           {/* Aktionen */}
-          <div className="grid grid-cols-3 gap-2 mt-4">
-            <Action icon={<ArrowDownLeft size={22} />} label="Einzahlung" cls="text-save" onClick={() => onBook('income')} />
-            <Action icon={<ArrowUpRight size={22} />} label="Auszahlung" cls="text-spend" onClick={() => onBook('expense')} />
+          {locked ? (
+            <Card className="mt-4 text-center">
+              <div className="size-12 rounded-full bg-surface-2 grid place-items-center mx-auto"><Lock size={22} /></div>
+              <p className="font-semibold mt-2">{selected.name} ist gesperrt</p>
+              <p className="text-sm text-muted mt-1">Beträge und Buchungen sind ausgeblendet.</p>
+              <Button className="w-full mt-4 flex items-center justify-center gap-2" onClick={() => toggleLock(selected)}><Unlock size={18} /> Entsperren</Button>
+            </Card>
+          ) : (
+          <>
+          <div className="grid grid-cols-4 gap-2 mt-4">
+            <Action icon={<ArrowDownLeft size={22} />} label="Einzahlen" cls="text-save" onClick={() => onBook('income')} />
+            <Action icon={<ArrowUpRight size={22} />} label="Auszahlen" cls="text-spend" onClick={() => onBook('expense')} />
             <Action icon={<Pencil size={20} />} label="Bearbeiten" cls="text-white/85" onClick={() => setEdit(selected)} />
+            <Action icon={<Lock size={20} />} label="Sperren" cls="text-amber-300" onClick={() => toggleLock(selected)} />
           </div>
 
           {/* Monat */}
@@ -130,6 +146,8 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
           </div>
           {usage && <div className="mt-2"><LimitBar usage={usage} hidden={hidden} onClick={() => setDetail(true)} /></div>}
           <p className="text-xs text-muted text-center mt-3">Tipp: Karte antippen für alle Buchungen</p>
+          </>
+          )}
         </>
       )}
 
@@ -138,7 +156,7 @@ export default function Accounts({ selectedId, onSelect, onBook, onEditTx, onTab
       <SaveLevel compact onClick={() => onTab('savings')} />
 
       {/* Letzte Bewegungen */}
-      {selected && (
+      {selected && !locked && (
         <>
           <SectionTitle action={txs.length > 0 && <button onClick={() => setDetail(true)} className="text-sm text-save min-h-9 px-1">Alle →</button>}>Letzte Buchungen</SectionTitle>
           {txs.length === 0 ? (
@@ -164,7 +182,7 @@ function Action({ icon, label, cls, onClick }) {
   return (
     <button onClick={onClick} className="min-h-20 rounded-2xl bg-surface border border-line/60 flex flex-col items-center justify-center gap-1.5 active:bg-surface-2">
       <span className={cls}>{icon}</span>
-      <span className="text-sm font-medium">{label}</span>
+      <span className="text-xs font-medium">{label}</span>
     </button>
   )
 }

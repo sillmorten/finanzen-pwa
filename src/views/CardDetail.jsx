@@ -12,7 +12,9 @@ import PositionSheet from '../components/PositionSheet'
 import { isInvest } from '../lib/categories'
 import { accountCash, accountPositions, positionsValue } from '../lib/finance'
 import { fmtEUR } from '../lib/format'
-import { Plus } from 'lucide-react'
+import { Plus, Lock, Unlock } from 'lucide-react'
+import { useLock } from '../lib/lock'
+import { Button } from '../components/ui'
 
 /** Vollbild-Detailansicht einer Karte mit allen Buchungen */
 export default function CardDetail({ account, hidden, onClose, onBook, onEditTx, onEditAccount, toast }) {
@@ -42,6 +44,8 @@ export default function CardDetail({ account, hidden, onClose, onBook, onEditTx,
   const flow = monthFlow(state, account.id, key)
   const usage = limitUsage(state, account, key)
   const isCurrent = key === monthKey()
+  const { toggleLock } = useLock()
+  const locked = !!account.locked
   const m = (v) => (hidden ? '•••' : fmtEUR0(v))
 
   return (
@@ -50,13 +54,24 @@ export default function CardDetail({ account, hidden, onClose, onBook, onEditTx,
         <div className="mx-auto max-w-lg flex items-center gap-2 px-2 h-16">
           <button onClick={onClose} className="size-12 grid place-items-center rounded-full active:bg-surface" aria-label="Zurück"><ArrowLeft size={24} /></button>
           <h2 className="text-xl font-bold truncate flex-1">{account.name}</h2>
-          <button onClick={onEditAccount} className="size-12 grid place-items-center rounded-full active:bg-surface text-muted" aria-label="Karte bearbeiten"><Pencil size={20} /></button>
+          <button onClick={() => toggleLock(account)} className={`size-12 grid place-items-center rounded-full active:bg-surface ${locked ? 'text-amber-300' : 'text-muted'}`} aria-label={locked ? 'Entsperren' : 'Sperren'}>{locked ? <Lock size={20} /> : <Unlock size={20} />}</button>
+          {!locked && <button onClick={onEditAccount} className="size-12 grid place-items-center rounded-full active:bg-surface text-muted" aria-label="Karte bearbeiten"><Pencil size={20} /></button>}
         </div>
       </header>
 
       <div className="mx-auto max-w-lg px-4 pb-32">
         <div className="px-[4%]"><BankCard account={account} balance={accountBalance(state, account)} perf={accountPerformance(state, account.id)} hidden={hidden} /></div>
 
+        {locked && (
+          <div className="text-center mt-10">
+            <div className="size-16 rounded-full bg-surface grid place-items-center mx-auto"><Lock size={28} /></div>
+            <p className="font-semibold mt-3">Karte gesperrt</p>
+            <p className="text-sm text-muted mt-1">Beträge, Positionen und Buchungen sind ausgeblendet.</p>
+            <Button className="mt-5 px-8 inline-flex items-center gap-2" onClick={() => toggleLock(account)}><Unlock size={18} /> Entsperren</Button>
+          </div>
+        )}
+
+        {!locked && <>
         {invest && (
           <>
             <div className="flex items-center justify-between mt-6 mb-2 px-1">
@@ -116,17 +131,18 @@ export default function CardDetail({ account, hidden, onClose, onBook, onEditTx,
             <p className="text-sm text-muted text-center py-8">Keine Buchungen {allTime ? 'auf dieser Karte' : `im ${monthLabel(key)}`}.</p>
           )}
         </div>
+        </>}
       </div>
 
       {posEdit && <PositionSheet position={posEdit.position} accountId={posEdit.accountId} onClose={() => setPosEdit(null)} toast={toast} />}
 
       {/* Aktionen unten, mit dem Daumen erreichbar */}
-      <div className="fixed bottom-0 inset-x-0 bg-bg/90 backdrop-blur border-t border-line/60 pb-safe">
+      {!locked && <div className="fixed bottom-0 inset-x-0 bg-bg/90 backdrop-blur border-t border-line/60 pb-safe">
         <div className="mx-auto max-w-lg grid grid-cols-2 gap-2 p-3">
           <button onClick={() => onBook('income')} className="min-h-14 rounded-2xl bg-save/15 text-save font-semibold flex items-center justify-center gap-2 active:bg-save/25"><ArrowDownLeft size={20} /> Einzahlung</button>
           <button onClick={() => onBook('expense')} className="min-h-14 rounded-2xl bg-spend/15 text-spend font-semibold flex items-center justify-center gap-2 active:bg-spend/25"><ArrowUpRight size={20} /> Auszahlung</button>
         </div>
-      </div>
+      </div>}
     </div>
   )
 }

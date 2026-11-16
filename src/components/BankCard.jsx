@@ -6,7 +6,9 @@ const NOISE =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")"
 
 /** Bankkarte im Premium-Metall-Look */
-export default function BankCard({ account, balance, perf = null, hidden = false, className = '', ...rest }) {
+export default function BankCard({ account, balance, perf = null, hidden: hiddenProp = false, className = '', ...rest }) {
+  const locked = !!account.locked
+  const hidden = hiddenProp || locked
   const theme = cardTheme(account.theme)
   const dark = theme.ink === 'dark'
   const ink = dark ? 'text-neutral-900' : 'text-white'
@@ -40,7 +42,7 @@ export default function BankCard({ account, balance, perf = null, hidden = false
             <div className="text-[17px] font-semibold tracking-wide leading-tight truncate" style={{ textShadow: dark ? '0 1px 0 rgba(255,255,255,.5)' : '0 1px 2px rgba(0,0,0,.45)' }}>{account.name}</div>
             <div className={`text-[10px] uppercase tracking-[0.22em] mt-1 ${sub}`}>{accountTypeLabel(account.type)}</div>
           </div>
-          {perf ? <PerfPill perf={perf} hidden={hidden} dark={dark} /> : <Monogram dark={dark} />}
+          {locked ? <LockBadge dark={dark} /> : perf ? <PerfPill perf={perf} hidden={hidden} dark={dark} /> : <Monogram dark={dark} />}
         </div>
 
         <div className="flex items-center gap-3 mt-[5%]">
@@ -55,7 +57,7 @@ export default function BankCard({ account, balance, perf = null, hidden = false
               className="text-[clamp(20px,6.6vw,27px)] leading-tight font-semibold tabular whitespace-nowrap tracking-tight mt-0.5"
               style={{ textShadow: dark ? '0 1px 0 rgba(255,255,255,.55), 0 -1px 0 rgba(0,0,0,.15)' : '0 1px 0 rgba(0,0,0,.5), 0 -1px 0 rgba(255,255,255,.08)' }}
             >
-              {hidden ? '•••••' : fmtEUR(balance)}
+              {locked ? 'Gesperrt' : hidden ? '•••••' : fmtEUR(balance)}
             </div>
           </div>
           {account.last4 && (
@@ -65,6 +67,14 @@ export default function BankCard({ account, balance, perf = null, hidden = false
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+function LockBadge({ dark }) {
+  return (
+    <div className={`shrink-0 size-10 rounded-full grid place-items-center backdrop-blur-md ring-1 ring-inset ${dark ? 'bg-white/40 ring-black/10 text-neutral-900' : 'bg-black/35 ring-white/20 text-white'}`}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-label="Gesperrt"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
     </div>
   )
 }

@@ -53,3 +53,12 @@ export function accountPerformance(state, id) {
   const gain = now - before
   return { value: gain, pct: before ? (gain / before) * 100 : 0, label: 'heute' }
 }
+
+/** Nur entsperrte Konten (für sichtbare Summen) */
+export const unlocked = (state) => state.accounts.filter((a) => !a.locked)
+export const lockedCount = (state) => state.accounts.filter((a) => a.locked).length
+export const visibleNetWorth = (state) => sum(unlocked(state), (a) => accountBalance(state, a))
+export const visibleAssetsTotal = (state) => {
+  const ids = new Set(unlocked(state).map((a) => a.id))
+  return sum(state.assets.filter((p) => ids.has(p.accountId)), positionValue)
+}
