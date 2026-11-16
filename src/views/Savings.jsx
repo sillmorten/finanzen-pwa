@@ -5,24 +5,17 @@ import { potBalance, potsTotal } from '../lib/finance'
 import { fmtEUR, fmtEUR0, parseAmount, monthsUntil, fmtNum } from '../lib/format'
 import { POT_PRESETS, POT_COLORS } from '../lib/categories'
 import { Card, Progress, Sheet, Field, inputCls, Button, AmountInput, ConfirmButton, Empty, Segmented, SectionTitle } from '../components/ui'
-import SaveLevel from '../components/SaveLevel'
 import WishList from '../components/WishList'
-import { levelFor, badges, randomCheer } from '../lib/gamify'
+import { badges, randomCheer } from '../lib/gamify'
 import { confetti, vibrate } from '../lib/confetti'
 
 /** Feiert Einzahlungen: Konfetti, Level-Up & Ziel erreicht */
 export function celebrateDeposit(state, pot, amount, toast) {
-  const total = potsTotal(state)
-  const before = levelFor(total)
-  const after = levelFor(total + amount)
   const bal = potBalance(pot)
   vibrate(20)
   if (pot.target > 0 && bal < pot.target && bal + amount >= pot.target) {
     confetti({ count: 220, duration: 2600 })
     toast(`🏁 Ziel „${pot.name}“ erreicht! Mega!`)
-  } else if (after.index > before.index) {
-    confetti({ count: 200, duration: 2400 })
-    toast(`${after.emoji} Level ${after.level}: ${after.name}!`)
   } else {
     confetti({ count: 70, duration: 1400 })
     toast(`+${fmtEUR0(amount)} · ${randomCheer()}`)
@@ -40,7 +33,6 @@ export default function Savings({ toast }) {
 
   return (
     <div>
-      <SaveLevel />
       {totalTarget > 0 && (
         <div className="flex justify-between text-xs text-muted mt-3 px-1">
           <span>In allen Töpfen: <span className="text-white font-semibold">{fmtEUR(total)}</span></span>
