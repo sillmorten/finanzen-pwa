@@ -4,10 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  # Kurse automatisch aktualisieren: stündlich Mo–Fr während der Börsenzeiten, sonst alle 4 Stunden
+  # Kurse automatisch aktualisieren. GitHub lässt geplante Läufe oft ausfallen,
+  # deshalb öfter anstoßen: alle 20 Minuten Mo–Fr (7–22 Uhr dt. Zeit), am Wochenende alle 2 Stunden.
   schedule:
-    - cron: '17 6-20 * * 1-5'
-    - cron: '17 */4 * * 0,6'
+    - cron: '7,27,47 6-20 * * 1-5'
+    - cron: '7 */2 * * 0,6'
 
 permissions:
   contents: read
